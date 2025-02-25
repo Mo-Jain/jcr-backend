@@ -1,0 +1,98 @@
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                      Int     @id @default(autoincrement())
+  username                String  @unique
+  name                    String?
+  password                String
+  imageUrl                String? 
+  profileFolderId         String?
+  bookings                Booking[]
+  Cars                    Car[]
+}     
+      
+model Car {     
+  id                      Int      @id @default(autoincrement())
+  brand                   String
+  model                   String
+  plateNumber             String
+  colorOfBooking          String
+  price                   Int
+  mileage                 Int
+  imageUrl                String
+  userId                  Int
+  totalEarnings           Int?
+  carFolderId             String
+  odometerReading         String?
+  user                    User     @relation(fields: [userId], references: [id])
+  bookings                Booking[]
+}     
+
+
+model Booking {     
+  id                      String   @id @unique
+  startDate               String
+  endDate                 String
+  startTime               String
+  endTime                 String
+  allDay                  Boolean
+  status                  String
+  carId                   Int
+  userId                  Int
+  securityDeposit         String?
+  dailyRentalPrice        Int
+  car                     Car      @relation(fields: [carId], references: [id])
+  user                    User     @relation(fields: [userId], references: [id])
+  advancePayment          Int?
+  totalEarnings           Int?
+  paymentMethod           String?
+  odometerReading         String? 
+  endodometerReading      String?
+  notes                   String?
+  selfieUrl               String?
+  bookingFolderId         String
+  carImages               CarImages[]
+  customerId              Int
+  customer                Customer @relation(fields: [customerId], references: [id])
+}
+
+model Documents {
+  id                      Int      @id @default(autoincrement())
+  url                     String
+  name                    String
+  type                    String
+  customerId              Int
+  customer                Customer @relation(fields: [customerId], references: [id])
+}
+
+model CarImages {
+  id                      Int      @id @default(autoincrement())
+  url                     String
+  name                    String
+  bookingId               String
+  booking                 Booking     @relation(fields: [bookingId], references: [id])
+}
+
+
+model Customer {
+  id                      Int      @id @default(autoincrement())
+  name                    String
+  contact                 String
+  imageUrl                String?
+  folderId                String
+  address                 String?
+  bookings                Booking[]
+  documents               Documents[]
+  @@unique([name, contact])
+}
+
+
+
+
