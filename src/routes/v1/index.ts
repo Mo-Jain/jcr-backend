@@ -7,7 +7,7 @@ import { carRouter } from "./car";
 import { bookingRouter } from "./booking";
 import { calendarRouter } from "./calendar";
 import { customerRouter } from "./customer";
-import client from "../../store";
+import client from "../../store/src";
 
 export const router = Router();
 

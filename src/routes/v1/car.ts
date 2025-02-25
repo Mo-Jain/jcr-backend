@@ -2,7 +2,7 @@ import {  Router } from "express";
 import { CarsSchema, CarsUpdateSchema } from "../../types";
 import { middleware } from "../../middleware";
 import { deleteFolder } from "./folder";
-import client from "../../store";
+import client from "../../store/src";
 
 export const carRouter = Router();
 

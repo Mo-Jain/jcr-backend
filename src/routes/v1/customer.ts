@@ -1,5 +1,5 @@
 import {  Router } from "express";
-import client from "../../store";
+import client from "../../store/src";
 import { middleware } from "../../middleware";
 import { CustomerCreateSchema, CustomerUpdateSchema } from "../../types";
 import { deleteFolder } from "./folder";

@@ -1,7 +1,7 @@
 import {  Router } from "express";
 import {  CalendarUpdateSchema } from "../../types";
 import { middleware } from "../../middleware";
-import client from "../../store";
+import client from "../../store/src";
 
 export const calendarRouter = Router();
 

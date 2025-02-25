@@ -4,7 +4,7 @@ import { middleware } from "../../middleware";
 import { createFolder, deleteFolder } from "./folder";
 import dotenv from "dotenv";
 import { ParsedQs } from 'qs';
-import client from "../../store";
+import client from "../../store/src";
 
 dotenv.config();
 
