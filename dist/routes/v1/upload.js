@@ -71,7 +71,9 @@ app.post("/upload/multiple", (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.status(400).json({ error: "No files uploaded" });
         return;
     }
-    const files = Array.isArray(req.files.file) ? req.files.file : [req.files.file];
+    const files = Array.isArray(req.files.file)
+        ? req.files.file
+        : [req.files.file];
     const totalSize = files.reduce((sum, file) => sum + file.size, 0);
     let uploadedBytes = 0;
     try {

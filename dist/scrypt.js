@@ -23,12 +23,12 @@ const keyLength = 32;
 const hash = (password) => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
         // generate random 16 bytes long salt - recommended by NodeJS Docs
-        const salt = (0, node_crypto_1.randomBytes)(16).toString('hex');
+        const salt = (0, node_crypto_1.randomBytes)(16).toString("hex");
         (0, node_crypto_1.scrypt)(password, salt, keyLength, (error, derivedKey) => {
             if (error)
                 reject(error);
             // derivedKey is of type Buffer
-            resolve(`${salt}.${derivedKey.toString('hex')}`);
+            resolve(`${salt}.${derivedKey.toString("hex")}`);
         });
     });
 });
@@ -41,9 +41,9 @@ exports.hash = hash;
  */
 const compare = (password, hash) => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
-        const [salt, hashKey] = hash.split('.');
+        const [salt, hashKey] = hash.split(".");
         // we need to pass buffer values to timingSafeEqual
-        const hashKeyBuff = Buffer.from(hashKey, 'hex');
+        const hashKeyBuff = Buffer.from(hashKey, "hex");
         (0, node_crypto_1.scrypt)(password, salt, keyLength, (error, derivedKey) => {
             if (error)
                 reject(error);

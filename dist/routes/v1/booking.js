@@ -20,12 +20,13 @@ const middleware_1 = require("../../middleware");
 const folder_1 = require("./folder");
 const dotenv_1 = __importDefault(require("dotenv"));
 const src_1 = __importDefault(require("../../store/src"));
+const delete_1 = require("./delete");
 dotenv_1.default.config();
 function calculateCost(startDate, endDate, startTime, endTime, pricePer24Hours) {
     const startDateTime = new Date(startDate);
     const endDateTime = new Date(endDate);
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
     startDateTime.setHours(startHour, startMinute, 0, 0);
     endDateTime.setHours(endHour, endMinute, 0, 0);
     let timeDifference = endDateTime.getTime() - startDateTime.getTime();
@@ -36,7 +37,7 @@ function calculateCost(startDate, endDate, startTime, endTime, pricePer24Hours) 
 const generateBookingId = () => __awaiter(void 0, void 0, void 0, function* () {
     // Get the last booking entry
     const lastBooking = yield src_1.default.booking.findFirst({
-        orderBy: { id: 'desc' }, // Get the latest booking
+        orderBy: { id: "desc" }, // Get the latest booking
     });
     let newId;
     if (!lastBooking) {
@@ -49,15 +50,6 @@ const generateBookingId = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     return newId;
 });
-const parseIds = (ids) => {
-    if (typeof ids === 'string') {
-        return ids.split(',').map(id => id.trim());
-    }
-    else if (Array.isArray(ids)) {
-        return ids.flatMap(id => typeof id === 'string' ? id.split(',').map(id => id.trim()) : []);
-    }
-    return [];
-};
 exports.bookingRouter = (0, express_1.Router)();
 exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.BookingSchema.safeParse(req.body);
@@ -80,8 +72,8 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
                 data: {
                     name: parsedData.data.customerName,
                     contact: parsedData.data.customerContact,
-                    folderId: folder.folderId
-                }
+                    folderId: folder.folderId,
+                },
             });
             customerId = customer.id;
         }
@@ -110,19 +102,22 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
                 userId: req.userId,
                 status: "Upcoming",
                 customerId: customerId,
-                bookingFolderId: folder.folderId
-            }
+                bookingFolderId: folder.folderId,
+            },
         });
         res.json({
             message: "Booking created successfully",
             bookingId: booking.id,
-            folderId: folder.folderId
+            folderId: folder.folderId,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -130,18 +125,15 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
     try {
         const bookings = yield src_1.default.booking.findMany({
             where: {
-                userId: req.userId
+                userId: req.userId,
             },
             include: {
                 car: true,
-                customer: true
+                customer: true,
             },
-            orderBy: [
-                { startDate: 'asc' },
-                { startTime: 'asc' }
-            ],
+            orderBy: [{ startDate: "asc" }, { startTime: "asc" }],
         });
-        const formatedBookings = bookings.map(booking => {
+        const formatedBookings = bookings.map((booking) => {
             return {
                 id: booking.id,
                 start: booking.startDate,
@@ -156,18 +148,21 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 customerName: booking.customer.name,
                 customerContact: booking.customer.contact,
                 carColor: booking.car.colorOfBooking,
-                odometerReading: booking.car.odometerReading
+                odometerReading: booking.car.odometerReading,
             };
         });
         res.json({
             message: "Bookings fetched successfully",
-            bookings: formatedBookings
+            bookings: formatedBookings,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -176,17 +171,17 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
+                userId: req.userId,
             },
             include: {
                 car: true,
                 carImages: true,
                 customer: {
                     include: {
-                        documents: true
-                    }
-                }
-            }
+                        documents: true,
+                    },
+                },
+            },
         });
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
@@ -220,39 +215,42 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             customerId: booking.customerId,
             folderId: booking.customer.folderId,
             bookingFolderId: booking.bookingFolderId,
-            currOdometerReading: booking.car.odometerReading
+            currOdometerReading: booking.car.odometerReading,
         };
         // Filter out null values dynamically
         const filteredBooking = Object.fromEntries(Object.entries(formatedBooking).filter(([_, value]) => value !== null));
         res.json({
             message: "Booking fetched successfully",
-            booking: filteredBooking
+            booking: filteredBooking,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
 exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('Request body:', req.body);
+    console.log("Request body:", req.body);
     const parsedData = types_1.MultipleBookingDeleteSchema.safeParse(req.body);
     if (!parsedData.success) {
-        console.error('Validation error:', parsedData.error);
-        res.status(400).json({ message: 'Wrong Input type' });
+        console.error("Validation error:", parsedData.error);
+        res.status(400).json({ message: "Wrong Input type" });
         return;
     }
     const { bookingIds } = parsedData.data;
-    console.log('Parsed booking IDs:', bookingIds);
+    console.log("Parsed booking IDs:", bookingIds);
     try {
         for (const id of req.body.bookingIds) {
             const booking = yield src_1.default.booking.findFirst({
                 where: {
                     id: id,
-                    userId: req.userId
-                }
+                    userId: req.userId,
+                },
             });
             if (!booking) {
                 res.status(400).json({ message: "Booking not found" });
@@ -260,14 +258,14 @@ exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res
             }
             yield src_1.default.carImages.deleteMany({
                 where: {
-                    bookingId: id
-                }
+                    bookingId: id,
+                },
             });
             yield src_1.default.booking.delete({
                 where: {
                     id: id,
-                    userId: req.userId
-                }
+                    userId: req.userId,
+                },
             });
             yield (0, folder_1.deleteFolder)(booking.bookingFolderId);
         }
@@ -278,7 +276,10 @@ exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -293,8 +294,8 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
-            }
+                userId: req.userId,
+            },
         });
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
@@ -339,51 +340,93 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
                 data: Object.assign({}, updateCustomerData),
             });
         }
-        yield src_1.default.booking.update({
+        const updatedbooking = yield src_1.default.booking.update({
             data: Object.assign({}, updateData),
             where: {
-                id: booking.id
-            }
+                id: booking.id,
+            },
+            include: {
+                carImages: true,
+                customer: {
+                    include: {
+                        documents: true,
+                    },
+                }
+            },
+        });
+        const documents = updatedbooking.customer.documents.map((document) => {
+            return {
+                id: document.id,
+                name: document.name,
+                url: document.url,
+                type: document.type,
+            };
         });
         if (parsedData.data.documents) {
             for (const document of parsedData.data.documents) {
-                yield src_1.default.documents.create({
+                const doc = yield src_1.default.document.create({
                     data: {
                         name: document.name,
                         url: document.url,
                         type: document.type,
-                        customerId: booking.customerId
-                    }
+                        customerId: booking.customerId,
+                    },
+                });
+                documents.push({
+                    id: doc.id,
+                    name: doc.name,
+                    url: doc.url,
+                    type: doc.type,
                 });
             }
         }
+        const carImages = updatedbooking.carImages.map((carImage) => {
+            return {
+                id: carImage.id,
+                name: carImage.name,
+                url: carImage.url,
+                bookingId: carImage.bookingId,
+            };
+        });
         if (parsedData.data.carImages) {
             for (const carImage of parsedData.data.carImages) {
-                yield src_1.default.carImages.create({
+                const image = yield src_1.default.carImages.create({
                     data: {
                         name: carImage.name,
                         url: carImage.url,
-                        bookingId: booking.id
-                    }
+                        bookingId: booking.id,
+                    },
+                });
+                carImages.push({
+                    id: image.id,
+                    name: image.name,
+                    url: image.url,
+                    bookingId: image.bookingId,
                 });
             }
         }
         res.json({
             message: "Booking updated successfully",
-            BookingId: booking.id
+            bookingId: booking.id,
+            documents: documents,
+            carImages: carImages,
+            selfieUrl: updatedbooking.selfieUrl
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
 exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.BookingStartSchema.safeParse(req.body);
     if (!parsedData.success) {
-        console.error('Validation error:', parsedData.error);
+        console.error("Validation error:", parsedData.error);
         res.status(400).json({ message: "Wrong Input type" });
         return;
     }
@@ -391,8 +434,8 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
-            }
+                userId: req.userId,
+            },
         });
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
@@ -401,16 +444,16 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
         yield src_1.default.car.update({
             where: { id: booking.carId },
             data: {
-                odometerReading: parsedData.data.odometerReading
-            }
+                odometerReading: parsedData.data.odometerReading,
+            },
         });
         yield src_1.default.customer.update({
             where: { id: booking.customerId },
             data: {
                 name: parsedData.data.customerName,
                 contact: parsedData.data.customerContact,
-                address: parsedData.data.customerAddress
-            }
+                address: parsedData.data.customerAddress,
+            },
         });
         const updatedBooking = yield src_1.default.booking.update({
             data: {
@@ -430,18 +473,18 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 selfieUrl: parsedData.data.selfieUrl,
             },
             where: {
-                id: req.params.id
-            }
+                id: req.params.id,
+            },
         });
         if (parsedData.data.documents) {
             for (const document of parsedData.data.documents) {
-                yield src_1.default.documents.create({
+                yield src_1.default.document.create({
                     data: {
                         name: document.name,
                         url: document.url,
                         type: document.type,
-                        customerId: booking.customerId
-                    }
+                        customerId: booking.customerId,
+                    },
                 });
             }
         }
@@ -450,19 +493,22 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 data: {
                     name: carImage.name,
                     url: carImage.url,
-                    bookingId: booking.id
-                }
+                    bookingId: booking.id,
+                },
             });
         }
         res.json({
             message: "Booking started successfully",
-            updatedStatus: updatedBooking.status
+            updatedStatus: updatedBooking.status,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -476,8 +522,8 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
-            }
+                userId: req.userId,
+            },
         });
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
@@ -490,12 +536,12 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
                 endDate: parsedData.data.endDate,
                 endTime: parsedData.data.endTime,
                 status: "Completed",
-                endodometerReading: parsedData.data.odometerReading
+                endodometerReading: parsedData.data.odometerReading,
             },
             where: {
                 id: req.params.id,
-                userId: req.userId
-            }
+                userId: req.userId,
+            },
         });
         console.log("booking updated");
         let increment = 0;
@@ -505,24 +551,27 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
         yield src_1.default.car.update({
             where: {
                 id: updatedBooking.carId,
-                userId: req.userId
+                userId: req.userId,
             },
             data: {
                 totalEarnings: {
-                    increment
+                    increment,
                 },
-                odometerReading: parsedData.data.odometerReading
-            }
+                odometerReading: parsedData.data.odometerReading,
+            },
         });
         res.json({
             message: "Booking ended successfully",
-            updatedStatus: updatedBooking.status
+            updatedStatus: updatedBooking.status,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -531,7 +580,10 @@ exports.bookingRouter.delete("/:id", middleware_1.middleware, (req, res) => __aw
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
+                userId: req.userId,
+            },
+            include: {
+                carImages: true,
             }
         });
         if (!booking) {
@@ -540,45 +592,73 @@ exports.bookingRouter.delete("/:id", middleware_1.middleware, (req, res) => __aw
         }
         yield src_1.default.carImages.deleteMany({
             where: {
-                bookingId: req.params.id
-            }
+                bookingId: req.params.id,
+            },
         });
+        if (booking.carImages.length > 0) {
+            yield (0, delete_1.deleteMultipleFiles)(booking.carImages.map((carImage) => carImage.url));
+        }
         yield src_1.default.booking.delete({
             where: {
                 id: req.params.id,
-                userId: req.userId
-            }
+                userId: req.userId,
+            },
         });
+        if (booking.selfieUrl) {
+            yield (0, delete_1.deleteFile)(booking.selfieUrl);
+        }
         yield (0, folder_1.deleteFolder)(booking.bookingFolderId);
         res.json({
             message: "Booking deleted successfully",
-            BookingId: booking.id
+            BookingId: booking.id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
-exports.bookingRouter.delete('/:id/car-images/all', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.bookingRouter.delete("/:id/car-images/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
     try {
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: id,
+                userId: req.userId,
+            },
+            include: {
+                carImages: true,
+            }
+        });
+        if (!booking) {
+            res.status(400).json({
+                message: "Booking not found",
+            });
+            return;
+        }
         yield src_1.default.carImages.deleteMany({
             where: {
                 bookingId: id,
-            }
+            },
         });
+        yield (0, delete_1.deleteMultipleFiles)(booking.carImages.map((carImage) => carImage.url));
         res.status(200).json({
             message: "Car image deleted successfully",
-            BookingId: id
+            BookingId: id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -595,8 +675,8 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
             let customer = yield src_1.default.customer.findFirst({
                 where: {
                     name: data.customerName,
-                    contact: data.customerContact
-                }
+                    contact: data.customerContact,
+                },
             });
             if (!customer) {
                 const folder = yield (0, folder_1.createFolder)(data.customerName + "_" + data.customerContact, "customer");
@@ -612,8 +692,8 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
                         name: data.customerName,
                         contact: data.customerContact,
                         address: data.customerAddress,
-                        folderId: folder.folderId
-                    }
+                        folderId: folder.folderId,
+                    },
                 });
             }
             const newBookingId = yield generateBookingId();
@@ -646,8 +726,8 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
                     odometerReading: data.odometerReading,
                     notes: data.notes,
                     customerId: customer.id,
-                    bookingFolderId: folder.folderId
-                }
+                    bookingFolderId: folder.folderId,
+                },
             });
             bookings.push({
                 id: newBookingId,
@@ -659,7 +739,7 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
                 carId: data.carId,
                 customerId: customer.id,
                 customerName: customer.name,
-                customerContact: customer.contact
+                customerContact: customer.contact,
             });
         }
         res.status(200).json({ message: "Booking created successfully", bookings });
@@ -667,48 +747,76 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
     }
     catch (err) {
         console.log(err);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: err,
+        });
         return;
     }
 }));
-exports.bookingRouter.delete('/car-image/:id', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.bookingRouter.delete("/car-image/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        yield src_1.default.carImages.delete({
+        const carImage = yield src_1.default.carImages.delete({
             where: {
-                id: parseInt(req.params.id)
-            }
+                id: parseInt(req.params.id),
+            },
         });
+        yield (0, delete_1.deleteFile)(carImage.url);
         res.status(200).json({
             message: "Car image deleted successfully",
-            BookingId: req.params.id
+            BookingId: req.params.id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
-exports.bookingRouter.delete('/selfie-url/:id', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.bookingRouter.delete("/selfie-url/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId,
+            },
+            include: {
+                carImages: true,
+            }
+        });
+        if (!booking) {
+            res.status(400).json({
+                message: "Booking not found",
+            });
+            return;
+        }
+        if (booking.selfieUrl) {
+            yield (0, delete_1.deleteFile)(booking.selfieUrl);
+        }
         yield src_1.default.booking.update({
             where: {
-                id: req.params.id
+                id: req.params.id,
             },
             data: {
-                selfieUrl: ""
-            }
+                selfieUrl: "",
+            },
         });
         res.status(200).json({
             message: "selfie deleted successfully",
-            BookingId: req.params.id
+            BookingId: req.params.id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));

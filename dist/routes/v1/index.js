@@ -23,6 +23,7 @@ const booking_1 = require("./booking");
 const calendar_1 = require("./calendar");
 const customer_1 = require("./customer");
 const src_1 = __importDefault(require("../../store/src"));
+const delete_1 = require("./delete");
 exports.router = (0, express_1.Router)();
 exports.router.post("/signup/se23crt1", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // check the user
@@ -37,7 +38,7 @@ exports.router.post("/signup/se23crt1", (req, res) => __awaiter(void 0, void 0, 
                 username: parsedData.data.username,
                 password: parsedData.data.password,
                 name: parsedData.data.name,
-            }
+            },
         });
         const token = jsonwebtoken_1.default.sign({
             userId: user.id,
@@ -52,7 +53,10 @@ exports.router.post("/signup/se23crt1", (req, res) => __awaiter(void 0, void 0, 
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "User already exists" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -66,8 +70,8 @@ exports.router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, f
         const user = yield src_1.default.user.findFirst({
             where: {
                 username: parsedData.data.username,
-                password: parsedData.data.password
-            }
+                password: parsedData.data.password,
+            },
         });
         if (!user) {
             res.status(403).json({ message: "Invalid username or password" });
@@ -86,7 +90,10 @@ exports.router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, f
     }
     catch (e) {
         console.log(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -94,8 +101,8 @@ exports.router.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 
     try {
         const user = yield src_1.default.user.findFirst({
             where: {
-                id: req.userId
-            }
+                id: req.userId,
+            },
         });
         if (!user) {
             res.status(404).json({ message: "User not found" });
@@ -103,13 +110,16 @@ exports.router.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 
         }
         res.json({
             message: "User fetched successfully",
-            user
+            user,
         });
         return;
     }
     catch (e) {
         console.log(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -117,8 +127,8 @@ exports.router.get("/me/name", middleware_1.middleware, (req, res) => __awaiter(
     try {
         const user = yield src_1.default.user.findFirst({
             where: {
-                id: req.userId
-            }
+                id: req.userId,
+            },
         });
         if (!user) {
             res.status(404).json({ message: "User not found" });
@@ -127,12 +137,15 @@ exports.router.get("/me/name", middleware_1.middleware, (req, res) => __awaiter(
         res.json({
             message: "User fetched successfully",
             name: user.name,
-            imageUrl: user.imageUrl
+            imageUrl: user.imageUrl,
         });
         return;
     }
     catch (e) {
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -143,19 +156,34 @@ exports.router.put("/me", middleware_1.middleware, (req, res) => __awaiter(void 
         return;
     }
     try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
         yield src_1.default.user.update({
             where: {
-                id: req.userId
+                id: req.userId,
             },
             data: Object.assign({}, parsedData.data),
         });
+        if (parsedData.data.imageUrl && user.imageUrl) {
+            yield (0, delete_1.deleteFile)(user.imageUrl);
+        }
         res.json({
             message: "User data updated successfully",
         });
         return;
     }
     catch (e) {
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));

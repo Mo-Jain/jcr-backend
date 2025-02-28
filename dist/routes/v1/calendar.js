@@ -22,14 +22,14 @@ exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awai
     try {
         const bookings = yield src_1.default.booking.findMany({
             where: {
-                userId: req.userId
+                userId: req.userId,
             },
             include: {
                 car: true,
-                customer: true
-            }
+                customer: true,
+            },
         });
-        const formatedBookings = bookings.map(booking => {
+        const formatedBookings = bookings.map((booking) => {
             return {
                 id: booking.id,
                 startDate: booking.startDate,
@@ -47,12 +47,15 @@ exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awai
         });
         res.json({
             message: "Bookings fetched successfully",
-            bookings: formatedBookings
+            bookings: formatedBookings,
         });
         return;
     }
     catch (e) {
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -66,7 +69,7 @@ exports.calendarRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
+                userId: req.userId,
             },
             include: {
                 car: true,
@@ -110,7 +113,10 @@ exports.calendarRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
         return;
     }
     catch (e) {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -119,11 +125,11 @@ exports.calendarRouter.delete("/:id", middleware_1.middleware, (req, res) => __a
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId
+                userId: req.userId,
             },
             include: {
-                car: true
-            }
+                car: true,
+            },
         });
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
@@ -131,22 +137,25 @@ exports.calendarRouter.delete("/:id", middleware_1.middleware, (req, res) => __a
         }
         yield src_1.default.carImages.deleteMany({
             where: {
-                bookingId: req.params.id
-            }
+                bookingId: req.params.id,
+            },
         });
         yield src_1.default.booking.delete({
             where: {
-                id: req.params.id
-            }
+                id: req.params.id,
+            },
         });
         res.json({
             message: "Booking deleted successfully",
-            BookingId: booking.id
+            BookingId: booking.id,
         });
         return;
     }
     catch (e) {
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -155,8 +164,8 @@ exports.calendarRouter.put("/change-color/:id", middleware_1.middleware, (req, r
         const car = yield src_1.default.car.findFirst({
             where: {
                 id: parseInt(req.params.id),
-                userId: req.userId
-            }
+                userId: req.userId,
+            },
         });
         if (!car) {
             res.status(400).json({ message: "Car not found" });
@@ -164,20 +173,23 @@ exports.calendarRouter.put("/change-color/:id", middleware_1.middleware, (req, r
         }
         yield src_1.default.car.update({
             data: {
-                colorOfBooking: req.body.color
+                colorOfBooking: req.body.color,
             },
             where: {
-                id: parseInt(req.params.id)
-            }
+                id: parseInt(req.params.id),
+            },
         });
         res.json({
             message: "Booking color updated successfully",
-            CarId: car.id
+            CarId: car.id,
         });
         return;
     }
     catch (e) {
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));

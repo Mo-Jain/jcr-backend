@@ -18,22 +18,26 @@ const src_1 = __importDefault(require("../../store/src"));
 const middleware_1 = require("../../middleware");
 const types_1 = require("../../types");
 const folder_1 = require("./folder");
+const delete_1 = require("./delete");
 exports.customerRouter = (0, express_1.Router)();
 exports.customerRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const customers = yield src_1.default.customer.findMany({
             include: {
-                documents: true
-            }
+                documents: true,
+            },
         });
         res.json({
             message: "Customer fetched successfully",
-            customers: customers
+            customers: customers,
         });
         return;
     }
     catch (e) {
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -47,8 +51,8 @@ exports.customerRouter.post("/", middleware_1.middleware, (req, res) => __awaite
         const customer = yield src_1.default.customer.findFirst({
             where: {
                 name: parsedData.data.name,
-                contact: parsedData.data.contact
-            }
+                contact: parsedData.data.contact,
+            },
         });
         if (customer) {
             res.status(400).json({ message: "Customer already exist" });
@@ -62,31 +66,41 @@ exports.customerRouter.post("/", middleware_1.middleware, (req, res) => __awaite
                 folderId: parsedData.data.folderId,
             },
             include: {
-                documents: true
-            }
+                documents: true,
+            },
         });
+        const documents = [];
         if (parsedData.data.documents) {
             for (const document of parsedData.data.documents) {
-                yield src_1.default.documents.create({
+                const doc = yield src_1.default.document.create({
                     data: {
                         name: document.name,
                         url: document.url,
                         type: document.type,
-                        customerId: newCustomer.id
-                    }
+                        customerId: newCustomer.id,
+                    },
+                });
+                documents.push({
+                    id: doc.id,
+                    name: doc.name,
+                    url: doc.url,
+                    type: doc.type,
                 });
             }
         }
         res.json({
             message: "Customer updated successfully",
             id: newCustomer.id,
-            documents: newCustomer.documents
+            documents,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -102,8 +116,8 @@ exports.customerRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
                 id: parseInt(req.params.id),
             },
             include: {
-                documents: true
-            }
+                documents: true,
+            },
         });
         if (!customer) {
             res.status(400).json({ message: "Customer not found" });
@@ -111,13 +125,13 @@ exports.customerRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
         }
         if (parsedData.data.documents) {
             for (const document of parsedData.data.documents) {
-                yield src_1.default.documents.create({
+                yield src_1.default.document.create({
                     data: {
                         name: document.name,
                         url: document.url,
                         type: document.type,
-                        customerId: customer.id
-                    }
+                        customerId: customer.id,
+                    },
                 });
             }
         }
@@ -129,22 +143,33 @@ exports.customerRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
                 folderId: parsedData.data.folderId,
             },
             where: {
-                id: customer.id
+                id: customer.id,
             },
             include: {
-                documents: true
-            }
+                documents: true,
+            },
+        });
+        const documents = updatedCustomer.documents.map((document) => {
+            return {
+                id: document.id,
+                name: document.name,
+                url: document.url,
+                type: document.type,
+            };
         });
         res.json({
             message: "Customer updated successfully",
             CustomerId: customer.id,
-            documents: updatedCustomer.documents
+            documents: documents,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
@@ -155,72 +180,109 @@ exports.customerRouter.delete("/:id", middleware_1.middleware, (req, res) => __a
                 id: parseInt(req.params.id),
             },
             include: {
-                documents: true
-            }
+                documents: true,
+                bookings: true,
+            },
         });
         if (!customer) {
             res.status(400).json({ message: "Customer not found" });
             return;
         }
-        yield src_1.default.documents.deleteMany({
+        if (customer.bookings.length > 0) {
+            res
+                .status(400)
+                .json({ message: "Customer has bookings, cannot be deleted" });
+            return;
+        }
+        yield src_1.default.document.deleteMany({
             where: {
-                customerId: customer.id
-            }
+                customerId: customer.id,
+            },
         });
+        if (customer.documents.length > 0) {
+            yield (0, delete_1.deleteMultipleFiles)(customer.documents.map((document) => document.url));
+        }
+        yield (0, folder_1.deleteFolder)(customer.folderId);
         yield src_1.default.customer.delete({
             where: {
-                id: customer.id
-            }
+                id: customer.id,
+            },
         });
-        yield (0, folder_1.deleteFolder)(customer.folderId);
         res.json({
             message: "Customer deleted successfully",
-            CustomerId: customer.id
+            CustomerId: customer.id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
-exports.customerRouter.delete('/:id/documents/all', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.customerRouter.delete("/:id/documents/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
     try {
-        yield src_1.default.documents.deleteMany({
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: parseInt(id),
+            },
+            include: {
+                documents: true,
+            },
+        });
+        if (!customer) {
+            res.status(400).json({ message: "Customer not found" });
+            return;
+        }
+        yield src_1.default.document.deleteMany({
             where: {
                 customerId: parseInt(id),
-            }
+            },
         });
+        if (customer.documents.length > 0) {
+            yield (0, delete_1.deleteMultipleFiles)(customer.documents.map((document) => document.url));
+        }
         res.status(200).json({
             message: "Document deleted successfully",
-            BookingId: id
+            BookingId: id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));
-exports.customerRouter.delete('/document/:id', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.customerRouter.delete("/document/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        yield src_1.default.documents.delete({
+        const document = yield src_1.default.document.delete({
             where: {
                 id: parseInt(req.params.id),
-            }
+            },
         });
+        if (document.url) {
+            yield (0, delete_1.deleteFile)(document.url);
+        }
         res.status(200).json({
             message: "Document deleted successfully",
-            BookingId: req.params.id
+            BookingId: req.params.id,
         });
         return;
     }
     catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Internal server error" });
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
         return;
     }
 }));

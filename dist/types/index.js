@@ -9,7 +9,7 @@ const bufferSchema = zod_1.default.instanceof(Buffer);
 exports.SignupSchema = zod_1.default.object({
     username: zod_1.default.string(),
     password: zod_1.default.string(),
-    name: zod_1.default.string()
+    name: zod_1.default.string(),
 });
 exports.SigninSchema = zod_1.default.object({
     username: zod_1.default.string(),
@@ -20,7 +20,7 @@ exports.UpdateUserSchema = zod_1.default.object({
     password: zod_1.default.string().optional(),
     name: zod_1.default.string().optional(),
     imageUrl: zod_1.default.string().url().optional(),
-    profileFolderId: zod_1.default.string().optional()
+    profileFolderId: zod_1.default.string().optional(),
 });
 exports.CarsSchema = zod_1.default.object({
     brand: zod_1.default.string(),
@@ -36,7 +36,7 @@ exports.CarsUpdateSchema = zod_1.default.object({
     color: zod_1.default.string().optional(),
     price: zod_1.default.number().optional(),
     mileage: zod_1.default.number().optional(),
-    imageUrl: zod_1.default.string().url().optional()
+    imageUrl: zod_1.default.string().url().optional(),
 });
 exports.BookingSchema = zod_1.default.object({
     startDate: zod_1.default.string(),
@@ -56,7 +56,7 @@ const DocumentSchema = zod_1.default.object({
     name: zod_1.default.string(),
     url: zod_1.default.string().url(),
     type: zod_1.default.string(),
-    folderId: zod_1.default.string().optional()
+    folderId: zod_1.default.string().optional(),
 });
 exports.BookingUpdateSchema = zod_1.default.object({
     startDate: zod_1.default.string().optional(),
@@ -123,7 +123,7 @@ exports.BookingEndSchema = zod_1.default.object({
     odometerReading: zod_1.default.string(),
 });
 exports.MultipleBookingDeleteSchema = zod_1.default.object({
-    bookingIds: zod_1.default.array(zod_1.default.string())
+    bookingIds: zod_1.default.array(zod_1.default.string()),
 });
 exports.CalendarUpdateSchema = zod_1.default.object({
     startDate: zod_1.default.string().optional(),
@@ -138,12 +138,12 @@ exports.CustomerCreateSchema = zod_1.default.object({
     contact: zod_1.default.string(),
     address: zod_1.default.string(),
     folderId: zod_1.default.string(),
-    documents: zod_1.default.array(DocumentSchema).optional()
+    documents: zod_1.default.array(DocumentSchema).optional(),
 });
 exports.CustomerUpdateSchema = zod_1.default.object({
     name: zod_1.default.string(),
     contact: zod_1.default.string(),
     address: zod_1.default.string(),
     folderId: zod_1.default.string().optional(),
-    documents: zod_1.default.array(DocumentSchema).optional()
+    documents: zod_1.default.array(DocumentSchema).optional(),
 });

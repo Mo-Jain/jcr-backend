@@ -13,4 +13,4 @@ dotenv_1.default.config();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.use("/api/v1", v1_1.router);
-app.listen(3001, () => console.log('Server running on port 3001'));
+app.listen(3001, () => console.log("Server running on port 3001"));

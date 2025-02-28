@@ -8,8 +8,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 app.use(cors());
-app.use(express.json())
+app.use(express.json());
 
-app.use("/api/v1", router)
+app.use("/api/v1", router);
 
-app.listen(3001, () => console.log('Server running on port 3001'));
+app.listen(3001, () => console.log("Server running on port 3001"));
