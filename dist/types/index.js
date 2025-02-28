@@ -1,84 +1,104 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __importDefault =
+  (this && this.__importDefault) ||
+  function (mod) {
+    return mod && mod.__esModule ? mod : { default: mod };
+  };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CustomerUpdateSchema = exports.CustomerCreateSchema = exports.CalendarUpdateSchema = exports.MultipleBookingDeleteSchema = exports.BookingEndSchema = exports.BookingStartSchema = exports.MultipleBookingSchema = exports.BookingUpdateSchema = exports.BookingSchema = exports.CarsUpdateSchema = exports.CarsSchema = exports.UpdateUserSchema = exports.SigninSchema = exports.SignupSchema = void 0;
+exports.CustomerUpdateSchema =
+  exports.CustomerCreateSchema =
+  exports.CalendarUpdateSchema =
+  exports.MultipleBookingDeleteSchema =
+  exports.BookingEndSchema =
+  exports.BookingStartSchema =
+  exports.MultipleBookingSchema =
+  exports.BookingUpdateSchema =
+  exports.BookingSchema =
+  exports.CarsUpdateSchema =
+  exports.CarsSchema =
+  exports.UpdateUserSchema =
+  exports.SigninSchema =
+  exports.SignupSchema =
+    void 0;
 const zod_1 = __importDefault(require("zod"));
 const bufferSchema = zod_1.default.instanceof(Buffer);
 exports.SignupSchema = zod_1.default.object({
-    username: zod_1.default.string(),
-    password: zod_1.default.string(),
-    name: zod_1.default.string(),
+  username: zod_1.default.string(),
+  password: zod_1.default.string(),
+  name: zod_1.default.string(),
 });
 exports.SigninSchema = zod_1.default.object({
-    username: zod_1.default.string(),
-    password: zod_1.default.string(),
+  username: zod_1.default.string(),
+  password: zod_1.default.string(),
 });
 exports.UpdateUserSchema = zod_1.default.object({
-    username: zod_1.default.string().optional(),
-    password: zod_1.default.string().optional(),
-    name: zod_1.default.string().optional(),
-    imageUrl: zod_1.default.string().url().optional(),
-    profileFolderId: zod_1.default.string().optional(),
+  username: zod_1.default.string().optional(),
+  password: zod_1.default.string().optional(),
+  name: zod_1.default.string().optional(),
+  imageUrl: zod_1.default.string().url().optional(),
+  profileFolderId: zod_1.default.string().optional(),
 });
 exports.CarsSchema = zod_1.default.object({
-    brand: zod_1.default.string(),
-    model: zod_1.default.string(),
-    plateNumber: zod_1.default.string(),
-    color: zod_1.default.string(),
-    price: zod_1.default.number(),
-    mileage: zod_1.default.number(),
-    imageUrl: zod_1.default.string().url(),
-    carFolderId: zod_1.default.string(),
+  brand: zod_1.default.string(),
+  model: zod_1.default.string(),
+  plateNumber: zod_1.default.string(),
+  color: zod_1.default.string(),
+  price: zod_1.default.number(),
+  mileage: zod_1.default.number(),
+  imageUrl: zod_1.default.string().url(),
+  carFolderId: zod_1.default.string(),
 });
 exports.CarsUpdateSchema = zod_1.default.object({
-    color: zod_1.default.string().optional(),
-    price: zod_1.default.number().optional(),
-    mileage: zod_1.default.number().optional(),
-    imageUrl: zod_1.default.string().url().optional(),
+  color: zod_1.default.string().optional(),
+  price: zod_1.default.number().optional(),
+  mileage: zod_1.default.number().optional(),
+  imageUrl: zod_1.default.string().url().optional(),
 });
 exports.BookingSchema = zod_1.default.object({
-    startDate: zod_1.default.string(),
-    endDate: zod_1.default.string(),
-    startTime: zod_1.default.string(),
-    endTime: zod_1.default.string(),
-    allDay: zod_1.default.boolean(),
-    carId: zod_1.default.number(),
-    customerName: zod_1.default.string(),
-    customerContact: zod_1.default.string(),
-    dailyRentalPrice: zod_1.default.number(),
-    totalAmount: zod_1.default.number(),
-    customerId: zod_1.default.number().optional(),
+  startDate: zod_1.default.string(),
+  endDate: zod_1.default.string(),
+  startTime: zod_1.default.string(),
+  endTime: zod_1.default.string(),
+  allDay: zod_1.default.boolean(),
+  carId: zod_1.default.number(),
+  customerName: zod_1.default.string(),
+  customerContact: zod_1.default.string(),
+  dailyRentalPrice: zod_1.default.number(),
+  totalAmount: zod_1.default.number(),
+  customerId: zod_1.default.number().optional(),
 });
 const DocumentSchema = zod_1.default.object({
-    id: zod_1.default.number().optional(),
-    name: zod_1.default.string(),
-    url: zod_1.default.string().url(),
-    type: zod_1.default.string(),
-    folderId: zod_1.default.string().optional(),
+  id: zod_1.default.number().optional(),
+  name: zod_1.default.string(),
+  url: zod_1.default.string().url(),
+  type: zod_1.default.string(),
+  folderId: zod_1.default.string().optional(),
 });
 exports.BookingUpdateSchema = zod_1.default.object({
-    startDate: zod_1.default.string().optional(),
-    endDate: zod_1.default.string().optional(),
-    startTime: zod_1.default.string().optional(),
-    endTime: zod_1.default.string().optional(),
-    allDay: zod_1.default.boolean().optional(),
-    carId: zod_1.default.number().optional(),
-    customerName: zod_1.default.string().optional(),
-    customerAddress: zod_1.default.string().optional(),
-    customerContact: zod_1.default.string().optional(),
-    securityDeposit: zod_1.default.string().optional(),
-    dailyRentalPrice: zod_1.default.number().optional(),
-    paymentMethod: zod_1.default.string().optional(),
-    odometerReading: zod_1.default.string().optional(),
-    notes: zod_1.default.string().optional(),
-    totalAmount: zod_1.default.number(),
-    documents: zod_1.default.array(DocumentSchema).optional(),
-    selfieUrl: zod_1.default.string().url().optional(),
-    carImages: zod_1.default.array(DocumentSchema).optional(),
+  startDate: zod_1.default.string().optional(),
+  endDate: zod_1.default.string().optional(),
+  startTime: zod_1.default.string().optional(),
+  endTime: zod_1.default.string().optional(),
+  allDay: zod_1.default.boolean().optional(),
+  status: zod_1.default.string().optional(),
+  carId: zod_1.default.number().optional(),
+  customerName: zod_1.default.string().optional(),
+  customerAddress: zod_1.default.string().optional(),
+  customerContact: zod_1.default.string().optional(),
+  securityDeposit: zod_1.default.string().optional(),
+  dailyRentalPrice: zod_1.default.number().optional(),
+  paymentMethod: zod_1.default.string().optional(),
+  advancePayment: zod_1.default.number().optional(),
+  odometerReading: zod_1.default.string().optional(),
+  endOdometerReading: zod_1.default.string().optional(),
+  notes: zod_1.default.string().optional(),
+  totalAmount: zod_1.default.number(),
+  documents: zod_1.default.array(DocumentSchema).optional(),
+  selfieUrl: zod_1.default.string().url().optional(),
+  carImages: zod_1.default.array(DocumentSchema).optional(),
 });
-exports.MultipleBookingSchema = zod_1.default.array(zod_1.default.object({
+exports.MultipleBookingSchema = zod_1.default.array(
+  zod_1.default.object({
     startDate: zod_1.default.string(),
     endDate: zod_1.default.string(),
     startTime: zod_1.default.string(),
@@ -96,54 +116,55 @@ exports.MultipleBookingSchema = zod_1.default.array(zod_1.default.object({
     customerName: zod_1.default.string(),
     customerContact: zod_1.default.string(),
     customerAddress: zod_1.default.string().optional(),
-}));
+  }),
+);
 exports.BookingStartSchema = zod_1.default.object({
-    bookingAmountReceived: zod_1.default.number(),
-    dailyRentalPrice: zod_1.default.number(),
-    notes: zod_1.default.string().optional(),
-    odometerReading: zod_1.default.string(),
-    paymentMethod: zod_1.default.string(),
-    returnDate: zod_1.default.string(),
-    returnTime: zod_1.default.string(),
-    securityDeposit: zod_1.default.string(),
-    selectedCar: zod_1.default.number(),
-    startDate: zod_1.default.string(),
-    startTime: zod_1.default.string(),
-    totalAmount: zod_1.default.number(),
-    documents: zod_1.default.array(DocumentSchema).optional(),
-    selfieUrl: zod_1.default.string().url(),
-    carImages: zod_1.default.array(DocumentSchema),
-    customerAddress: zod_1.default.string(),
-    customerName: zod_1.default.string(),
-    customerContact: zod_1.default.string(),
+  bookingAmountReceived: zod_1.default.number(),
+  dailyRentalPrice: zod_1.default.number(),
+  notes: zod_1.default.string().optional(),
+  odometerReading: zod_1.default.string(),
+  paymentMethod: zod_1.default.string(),
+  returnDate: zod_1.default.string(),
+  returnTime: zod_1.default.string(),
+  securityDeposit: zod_1.default.string(),
+  selectedCar: zod_1.default.number(),
+  startDate: zod_1.default.string(),
+  startTime: zod_1.default.string(),
+  totalAmount: zod_1.default.number(),
+  documents: zod_1.default.array(DocumentSchema).optional(),
+  selfieUrl: zod_1.default.string().url(),
+  carImages: zod_1.default.array(DocumentSchema),
+  customerAddress: zod_1.default.string(),
+  customerName: zod_1.default.string(),
+  customerContact: zod_1.default.string(),
 });
 exports.BookingEndSchema = zod_1.default.object({
-    endDate: zod_1.default.string(),
-    endTime: zod_1.default.string(),
-    odometerReading: zod_1.default.string(),
+  endDate: zod_1.default.string(),
+  endTime: zod_1.default.string(),
+  odometerReading: zod_1.default.string(),
 });
 exports.MultipleBookingDeleteSchema = zod_1.default.object({
-    bookingIds: zod_1.default.array(zod_1.default.string()),
+  bookingIds: zod_1.default.array(zod_1.default.string()),
 });
 exports.CalendarUpdateSchema = zod_1.default.object({
-    startDate: zod_1.default.string().optional(),
-    endDate: zod_1.default.string().optional(),
-    startTime: zod_1.default.string().optional(),
-    endTime: zod_1.default.string().optional(),
-    allDay: zod_1.default.boolean().optional(),
-    customerName: zod_1.default.string().optional(),
+  startDate: zod_1.default.string().optional(),
+  endDate: zod_1.default.string().optional(),
+  startTime: zod_1.default.string().optional(),
+  endTime: zod_1.default.string().optional(),
+  allDay: zod_1.default.boolean().optional(),
+  customerName: zod_1.default.string().optional(),
 });
 exports.CustomerCreateSchema = zod_1.default.object({
-    name: zod_1.default.string(),
-    contact: zod_1.default.string(),
-    address: zod_1.default.string(),
-    folderId: zod_1.default.string(),
-    documents: zod_1.default.array(DocumentSchema).optional(),
+  name: zod_1.default.string(),
+  contact: zod_1.default.string(),
+  address: zod_1.default.string(),
+  folderId: zod_1.default.string(),
+  documents: zod_1.default.array(DocumentSchema).optional(),
 });
 exports.CustomerUpdateSchema = zod_1.default.object({
-    name: zod_1.default.string(),
-    contact: zod_1.default.string(),
-    address: zod_1.default.string(),
-    folderId: zod_1.default.string().optional(),
-    documents: zod_1.default.array(DocumentSchema).optional(),
+  name: zod_1.default.string(),
+  contact: zod_1.default.string(),
+  address: zod_1.default.string(),
+  folderId: zod_1.default.string().optional(),
+  documents: zod_1.default.array(DocumentSchema).optional(),
 });

@@ -54,7 +54,9 @@ function calculateEarnings(bookings: Booking[]) {
 carRouter.post("/", middleware, async (req, res) => {
   const parsedData = CarsSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -145,6 +147,8 @@ carRouter.get("/:id", middleware, async (req, res) => {
           start: booking.startDate,
           end: booking.endDate,
           status: booking.status,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
           customerName: booking.customer.name,
           customerContact: booking.customer.contact,
         };
@@ -262,7 +266,9 @@ carRouter.get("/thismonth/earnings/all", middleware, async (req, res) => {
 carRouter.put("/:id", middleware, async (req, res) => {
   const parsedData = CarsUpdateSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -289,7 +295,7 @@ carRouter.put("/:id", middleware, async (req, res) => {
         id: parseInt(req.params.id),
       },
     });
-    if(parsedData.data.imageUrl && car.imageUrl){
+    if (parsedData.data.imageUrl && car.imageUrl) {
       await deleteFile(car.imageUrl);
     }
 

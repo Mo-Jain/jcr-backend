@@ -16,7 +16,9 @@ router.post("/signup/se23crt1", async (req, res) => {
   // check the user
   const parsedData = SignupSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
 
@@ -162,11 +164,11 @@ router.put("/me", middleware, async (req, res) => {
       },
     });
 
-    if(!user){
+    if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
-   
+
     await client.user.update({
       where: {
         id: req.userId,
@@ -175,7 +177,7 @@ router.put("/me", middleware, async (req, res) => {
         ...parsedData.data,
       },
     });
-    if(parsedData.data.imageUrl && user.imageUrl){
+    if (parsedData.data.imageUrl && user.imageUrl) {
       await deleteFile(user.imageUrl);
     }
     res.json({

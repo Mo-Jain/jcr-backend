@@ -38,7 +38,9 @@ customerRouter.get("/all", middleware, async (req, res) => {
 customerRouter.post("/", middleware, async (req, res) => {
   const parsedData = CustomerCreateSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -107,7 +109,9 @@ customerRouter.post("/", middleware, async (req, res) => {
 customerRouter.put("/:id", middleware, async (req, res) => {
   const parsedData = CustomerUpdateSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {

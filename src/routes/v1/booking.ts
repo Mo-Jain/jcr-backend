@@ -55,13 +55,14 @@ const generateBookingId = async () => {
   return newId;
 };
 
-
 export const bookingRouter = Router();
 
 bookingRouter.post("/", middleware, async (req, res) => {
   const parsedData = BookingSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -263,7 +264,9 @@ bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
   const parsedData = MultipleBookingDeleteSchema.safeParse(req.body);
   if (!parsedData.success) {
     console.error("Validation error:", parsedData.error);
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
 
@@ -314,10 +317,11 @@ bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
 });
 
 bookingRouter.put("/:id", middleware, async (req, res) => {
-  console.log("hi there");
   const parsedData = BookingUpdateSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -346,6 +350,8 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       updateData.endTime = parsedData.data.endTime;
     if (parsedData.data.allDay !== undefined)
       updateData.allDay = parsedData.data.allDay;
+    if (parsedData.data.status !== undefined)
+      updateData.status = parsedData.data.status;
     if (parsedData.data.carId !== undefined)
       updateData.carId = parsedData.data.carId;
     if (parsedData.data.securityDeposit !== undefined)
@@ -354,8 +360,12 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       updateData.dailyRentalPrice = parsedData.data.dailyRentalPrice;
     if (parsedData.data.paymentMethod !== undefined)
       updateData.paymentMethod = parsedData.data.paymentMethod;
+    if (parsedData.data.advancePayment !== undefined)
+      updateData.advancePayment = parsedData.data.advancePayment;
     if (parsedData.data.odometerReading !== undefined)
       updateData.odometerReading = parsedData.data.odometerReading;
+    if (parsedData.data.endOdometerReading !== undefined)
+      updateData.endodometerReading = parsedData.data.endOdometerReading;
     if (parsedData.data.notes !== undefined)
       updateData.notes = parsedData.data.notes;
     if (parsedData.data.selfieUrl !== undefined)
@@ -378,81 +388,84 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       });
     }
 
-    const updatedbooking =  await client.booking.update({
-                                data: {
-                                    ...updateData,
-                                },
-                                where: {
-                                    id: booking.id,
-                                },
-                                include: {
-                                    carImages: true,
-                                    customer: {
-                                        include: {
-                                            documents: true,
-                                        },
-                                    }
-                                },
-                        });
+    console.log(updateData);
+    const updatedbooking = await client.booking.update({
+      data: {
+        ...updateData,
+        carId: updateData.carId,
+      },
+      where: {
+        id: booking.id,
+      },
+      include: {
+        carImages: true,
+        customer: {
+          include: {
+            documents: true,
+          },
+        },
+      },
+    });
+    console.log(updatedbooking);
 
     const documents = updatedbooking.customer.documents.map((document) => {
-        return {
-            id: document.id,
-            name: document.name,
-            url: document.url,
-            type: document.type,
-        };
+      return {
+        id: document.id,
+        name: document.name,
+        url: document.url,
+        type: document.type,
+      };
     });
     if (parsedData.data.documents) {
       for (const document of parsedData.data.documents) {
-        const doc =   await client.document.create({
-                data: {
-                    name: document.name,
-                    url: document.url,
-                    type: document.type,
-                    customerId: booking.customerId,
-                },
-                });
+        const doc = await client.document.create({
+          data: {
+            name: document.name,
+            url: document.url,
+            type: document.type,
+            customerId: booking.customerId,
+          },
+        });
         documents.push({
-            id: doc.id,
-            name: doc.name,
-            url: doc.url,
-            type: doc.type,
+          id: doc.id,
+          name: doc.name,
+          url: doc.url,
+          type: doc.type,
         });
       }
     }
 
     const carImages = updatedbooking.carImages.map((carImage) => {
-        return {
-            id: carImage.id,
-            name: carImage.name,
-            url: carImage.url,
-            bookingId: carImage.bookingId,
-        };
+      return {
+        id: carImage.id,
+        name: carImage.name,
+        url: carImage.url,
+        bookingId: carImage.bookingId,
+      };
     });
     if (parsedData.data.carImages) {
       for (const carImage of parsedData.data.carImages) {
-        const image =    await client.carImages.create({
-                data: {
-                    name: carImage.name,
-                    url: carImage.url,
-                    bookingId: booking.id,
-                },
-                });
+        const image = await client.carImages.create({
+          data: {
+            name: carImage.name,
+            url: carImage.url,
+            bookingId: booking.id,
+          },
+        });
         carImages.push({
-            id: image.id,
-            name: image.name,
-            url: image.url,
-            bookingId: image.bookingId,
+          id: image.id,
+          name: image.name,
+          url: image.url,
+          bookingId: image.bookingId,
         });
       }
     }
     res.json({
-        message: "Booking updated successfully",
-        bookingId: booking.id,
-        documents: documents,
-        carImages: carImages,
-        selfieUrl: updatedbooking.selfieUrl
+      message: "Booking updated successfully",
+      bookingId: booking.id,
+      documents: documents,
+      carImages: carImages,
+      selfieUrl: updatedbooking.selfieUrl,
     });
     return;
   } catch (e) {
@@ -469,7 +482,9 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
   const parsedData = BookingStartSchema.safeParse(req.body);
   if (!parsedData.success) {
     console.error("Validation error:", parsedData.error);
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -563,7 +578,9 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
 bookingRouter.put("/:id/end", middleware, async (req, res) => {
   const parsedData = BookingEndSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
   try {
@@ -645,7 +662,7 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
       },
       include: {
         carImages: true,
-      }
+      },
     });
 
     if (!booking) {
@@ -659,8 +676,10 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
       },
     });
 
-    if(booking.carImages.length > 0){
-        await deleteMultipleFiles(booking.carImages.map((carImage) => carImage.url));
+    if (booking.carImages.length > 0) {
+      await deleteMultipleFiles(
+        booking.carImages.map((carImage) => carImage.url),
+      );
     }
 
     await client.booking.delete({
@@ -670,8 +689,8 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
       },
     });
 
-    if(booking.selfieUrl){
-        await deleteFile(booking.selfieUrl);
+    if (booking.selfieUrl) {
+      await deleteFile(booking.selfieUrl);
     }
 
     await deleteFolder(booking.bookingFolderId);
@@ -698,16 +717,16 @@ bookingRouter.delete("/:id/car-images/all", middleware, async (req, res) => {
       where: {
         id: id,
         userId: req.userId!,
-      },  
+      },
       include: {
         carImages: true,
-      }
+      },
     });
-    if(!booking){
-        res.status(400).json({
-            message: "Booking not found",
-        }); 
-        return;
+    if (!booking) {
+      res.status(400).json({
+        message: "Booking not found",
+      });
+      return;
     }
     await client.carImages.deleteMany({
       where: {
@@ -715,8 +734,10 @@ bookingRouter.delete("/:id/car-images/all", middleware, async (req, res) => {
       },
     });
 
-    await deleteMultipleFiles(booking.carImages.map((carImage) => carImage.url));
-    
+    await deleteMultipleFiles(
+      booking.carImages.map((carImage) => carImage.url),
+    );
+
     res.status(200).json({
       message: "Car image deleted successfully",
       BookingId: id,
@@ -735,7 +756,9 @@ bookingRouter.delete("/:id/car-images/all", middleware, async (req, res) => {
 bookingRouter.post("/multiple", middleware, async (req, res) => {
   const parsedData = MultipleBookingSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
 
@@ -851,10 +874,10 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
 bookingRouter.delete("/car-image/:id", middleware, async (req, res) => {
   try {
     const carImage = await client.carImages.delete({
-            where: {
-                id: parseInt(req.params.id),
-            },
-            });
+      where: {
+        id: parseInt(req.params.id),
+      },
+    });
     await deleteFile(carImage.url);
 
     res.status(200).json({
@@ -874,25 +897,25 @@ bookingRouter.delete("/car-image/:id", middleware, async (req, res) => {
 
 bookingRouter.delete("/selfie-url/:id", middleware, async (req, res) => {
   try {
-    const booking  = await client.booking.findFirst({
-        where: {
-            id: req.params.id,
-            userId: req.userId!,
-        },
-        include: {
-            carImages: true,
-        }
+    const booking = await client.booking.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.userId!,
+      },
+      include: {
+        carImages: true,
+      },
     });
 
-    if(!booking){
-        res.status(400).json({
-            message: "Booking not found",
-        }); 
-        return;
+    if (!booking) {
+      res.status(400).json({
+        message: "Booking not found",
+      });
+      return;
     }
 
-    if(booking.selfieUrl){
-        await deleteFile(booking.selfieUrl);
+    if (booking.selfieUrl) {
+      await deleteFile(booking.selfieUrl);
     }
     await client.booking.update({
       where: {

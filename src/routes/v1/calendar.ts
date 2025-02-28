@@ -49,7 +49,9 @@ calendarRouter.get("/all", middleware, async (req, res) => {
 calendarRouter.put("/:id", middleware, async (req, res) => {
   const parsedData = CalendarUpdateSchema.safeParse(req.body);
   if (!parsedData.success) {
-    res.status(400).json({ message: "Wrong Input type" });
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
 
