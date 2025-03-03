@@ -82,11 +82,7 @@ exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(voi
 }));
 exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const cars = yield src_1.default.car.findMany({
-            where: {
-                userId: req.userId,
-            },
-        });
+        const cars = yield src_1.default.car.findMany();
         const formatedCars = cars.map((car) => {
             return {
                 id: car.id,
@@ -117,7 +113,6 @@ exports.carRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(v
         const car = yield src_1.default.car.findFirst({
             where: {
                 id: parseInt(req.params.id),
-                userId: req.userId,
             },
             include: {
                 bookings: {
@@ -146,6 +141,7 @@ exports.carRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(v
         res.json({
             message: "Car fetched successfully",
             car: formatedCars,
+            isAdmin: req.userId === car.userId
         });
         return;
     }
@@ -163,7 +159,6 @@ exports.carRouter.get("/earnings/:id", middleware_1.middleware, (req, res) => __
         const car = yield src_1.default.car.findFirst({
             where: {
                 id: parseInt(req.params.id),
-                userId: req.userId,
             },
             include: {
                 bookings: true,

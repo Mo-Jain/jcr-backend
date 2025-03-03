@@ -89,11 +89,7 @@ carRouter.post("/", middleware, async (req, res) => {
 
 carRouter.get("/all", middleware, async (req, res) => {
   try {
-    const cars = await client.car.findMany({
-      where: {
-        userId: req.userId!,
-      },
-    });
+    const cars = await client.car.findMany();
     const formatedCars = cars.map((car) => {
       return {
         id: car.id,
@@ -105,6 +101,7 @@ carRouter.get("/all", middleware, async (req, res) => {
         price: car.price,
       };
     });
+    
     res.json({
       message: "Cars fetched successfully",
       cars: formatedCars,
@@ -124,7 +121,6 @@ carRouter.get("/:id", middleware, async (req, res) => {
     const car = await client.car.findFirst({
       where: {
         id: parseInt(req.params.id),
-        userId: req.userId!,
       },
       include: {
         bookings: {
@@ -157,6 +153,7 @@ carRouter.get("/:id", middleware, async (req, res) => {
     res.json({
       message: "Car fetched successfully",
       car: formatedCars,
+      isAdmin: req.userId === car.userId
     });
     return;
   } catch (e) {
@@ -174,7 +171,6 @@ carRouter.get("/earnings/:id", middleware, async (req, res) => {
     const car = await client.car.findFirst({
       where: {
         id: parseInt(req.params.id),
-        userId: req.userId!,
       },
       include: {
         bookings: true,

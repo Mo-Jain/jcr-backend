@@ -143,9 +143,6 @@ bookingRouter.post("/", middleware, async (req, res) => {
 bookingRouter.get("/all", middleware, async (req, res) => {
   try {
     const bookings = await client.booking.findMany({
-      where: {
-        userId: req.userId!,
-      },
       include: {
         car: true,
         customer: true,
@@ -168,6 +165,7 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         customerContact: booking.customer.contact,
         carColor: booking.car.colorOfBooking,
         odometerReading: booking.car.odometerReading,
+        isAdmin: req.userId === booking.userId
       };
     });
     res.json({
@@ -190,7 +188,6 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
     const booking = await client.booking.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
       },
       include: {
         car: true,
@@ -246,6 +243,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
     res.json({
       message: "Booking fetched successfully",
       booking: filteredBooking,
+      isAdmin: req.userId === booking.userId
     });
     return;
   } catch (e) {
