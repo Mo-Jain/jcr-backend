@@ -8,9 +8,6 @@ export const calendarRouter = Router();
 calendarRouter.get("/all", middleware, async (req, res) => {
   try {
     const bookings = await client.booking.findMany({
-      where: {
-        userId: req.userId!,
-      },
       include: {
         car: true,
         customer: true,
@@ -30,6 +27,7 @@ calendarRouter.get("/all", middleware, async (req, res) => {
         customerContact: booking.customer.contact,
         carId: booking.carId,
         carName: booking.car.brand + " " + booking.car.model,
+        isAdmin: req.userId === booking.userId
       };
     });
     res.json({

@@ -21,9 +21,6 @@ exports.calendarRouter = (0, express_1.Router)();
 exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const bookings = yield src_1.default.booking.findMany({
-            where: {
-                userId: req.userId,
-            },
             include: {
                 car: true,
                 customer: true,
@@ -43,6 +40,7 @@ exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awai
                 customerContact: booking.customer.contact,
                 carId: booking.carId,
                 carName: booking.car.brand + " " + booking.car.model,
+                isAdmin: req.userId === booking.userId
             };
         });
         res.json({
