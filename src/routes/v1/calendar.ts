@@ -41,7 +41,7 @@ calendarRouter.get("/all", middleware, async (req, res) => {
     });
     const formatedBookings:Booking[] = [];
     bookings.forEach((booking) => {
-      if(booking.status === "Completed") return;
+      if(booking.status.toLocaleLowerCase() === "completed") return;
       const newBook =  {
                 id: booking.id,
                 startDate: booking.startDate,
