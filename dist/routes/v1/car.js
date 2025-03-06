@@ -192,9 +192,6 @@ exports.carRouter.get("/earnings/:id", middleware_1.middleware, (req, res) => __
 exports.carRouter.get("/thismonth/earnings/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const cars = yield src_1.default.car.findMany({
-            where: {
-                userId: req.userId,
-            },
             include: {
                 bookings: true,
             },
