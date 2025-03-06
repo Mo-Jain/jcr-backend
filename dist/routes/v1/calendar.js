@@ -20,14 +20,27 @@ const src_1 = __importDefault(require("../../store/src"));
 exports.calendarRouter = (0, express_1.Router)();
 exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
         const bookings = yield src_1.default.booking.findMany({
             include: {
                 car: true,
                 customer: true,
             },
+            orderBy: [{ startDate: "asc" }, { startTime: "asc" }]
         });
-        const formatedBookings = bookings.map((booking) => {
-            return {
+        const formatedBookings = [];
+        bookings.forEach((booking) => {
+            if (booking.status.toLocaleLowerCase() === "completed")
+                return;
+            const newBook = {
                 id: booking.id,
                 startDate: booking.startDate,
                 endDate: booking.endDate,
@@ -42,6 +55,7 @@ exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awai
                 carName: booking.car.brand + " " + booking.car.model,
                 isAdmin: req.userId === booking.userId
             };
+            formatedBookings.push(newBook);
         });
         res.json({
             message: "Bookings fetched successfully",

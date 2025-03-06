@@ -125,6 +125,15 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
 }));
 exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
         const bookings = yield src_1.default.booking.findMany({
             include: {
                 car: true,
@@ -168,6 +177,15 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
 }));
 exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
