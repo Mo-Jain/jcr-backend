@@ -5,30 +5,59 @@ import client from "../../store/src";
 
 export const calendarRouter = Router();
 
+interface Booking {
+  id: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  startTime: string;
+  endTime: string;
+  color: string;
+  allDay: boolean;
+  customerName: string;
+  customerContact: string;
+  carId: number;
+  carName: string;
+  isAdmin: boolean;
+}
+
 calendarRouter.get("/all", middleware, async (req, res) => {
   try {
+    const user  = await client.user.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+    if (!user) {
+       res.status(401).json({ message: "Unauthorized" });
+       return;
+    }
     const bookings = await client.booking.findMany({
       include: {
         car: true,
         customer: true,
       },
+      orderBy: [{ startDate: "asc" }, { startTime: "asc" }]
     });
-    const formatedBookings = bookings.map((booking) => {
-      return {
-        id: booking.id,
-        startDate: booking.startDate,
-        endDate: booking.endDate,
-        status: booking.status,
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        color: booking.car.colorOfBooking,
-        allDay: booking.allDay,
-        customerName: booking.customer.name,
-        customerContact: booking.customer.contact,
-        carId: booking.carId,
-        carName: booking.car.brand + " " + booking.car.model,
-        isAdmin: req.userId === booking.userId
-      };
+    const formatedBookings:Booking[] = [];
+    bookings.forEach((booking) => {
+      if(booking.status === "Completed") return;
+      const newBook =  {
+                id: booking.id,
+                startDate: booking.startDate,
+                endDate: booking.endDate,
+                status: booking.status,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                color: booking.car.colorOfBooking,
+                allDay: booking.allDay,
+                customerName: booking.customer.name,
+                customerContact: booking.customer.contact,
+                carId: booking.carId,
+                carName: booking.car.brand + " " + booking.car.model,
+                isAdmin: req.userId === booking.userId
+              };
+      formatedBookings.push(newBook);
     });
     res.json({
       message: "Bookings fetched successfully",

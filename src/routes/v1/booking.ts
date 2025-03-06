@@ -142,6 +142,15 @@ bookingRouter.post("/", middleware, async (req, res) => {
 
 bookingRouter.get("/all", middleware, async (req, res) => {
   try {
+    const user  = await client.user.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+    if (!user) {
+       res.status(401).json({ message: "Unauthorized" });
+       return;
+    }
     const bookings = await client.booking.findMany({
       include: {
         car: true,
@@ -185,6 +194,15 @@ bookingRouter.get("/all", middleware, async (req, res) => {
 
 bookingRouter.get("/:id", middleware, async (req, res) => {
   try {
+    const user  = await client.user.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+    if (!user) {
+       res.status(401).json({ message: "Unauthorized" });
+       return;
+    }
     const booking = await client.booking.findFirst({
       where: {
         id: req.params.id,
