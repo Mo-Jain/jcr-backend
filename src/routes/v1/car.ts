@@ -207,10 +207,8 @@ carRouter.get("/earnings/:id", middleware, async (req, res) => {
 
 carRouter.get("/thismonth/earnings/all", middleware, async (req, res) => {
   try {
+    
     const cars = await client.car.findMany({
-      where: {
-        userId: req.userId!,
-      },
       include: {
         bookings: true,
       },
