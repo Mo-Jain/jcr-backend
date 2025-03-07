@@ -639,6 +639,20 @@ exports.bookingRouter.delete("/:id", middleware_1.middleware, (req, res) => __aw
                 userId: req.userId,
             },
         });
+        if (booking.status.toLocaleLowerCase() !== "completed" && booking.totalEarnings) {
+            yield src_1.default.car.update({
+                where: {
+                    id: booking.carId,
+                    userId: req.userId,
+                },
+                data: {
+                    totalEarnings: {
+                        decrement: booking.totalEarnings,
+                    },
+                },
+            });
+        }
+        ;
         if (booking.selfieUrl) {
             yield (0, delete_1.deleteFile)(booking.selfieUrl);
         }

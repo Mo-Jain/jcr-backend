@@ -172,6 +172,20 @@ calendarRouter.delete("/:id", middleware, async (req, res) => {
       },
     });
 
+    if(booking.status.toLocaleLowerCase() !== "completed" && booking.totalEarnings) {
+      await client.car.update({
+        where: {
+          id: booking.carId,
+          userId: req.userId!,
+        },
+        data: {
+          totalEarnings: {
+            decrement: booking.totalEarnings,
+          },
+        },
+      });
+    };
+
     res.json({
       message: "Booking deleted successfully",
       BookingId: booking.id,

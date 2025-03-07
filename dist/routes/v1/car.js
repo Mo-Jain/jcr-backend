@@ -44,6 +44,15 @@ function calculateEarnings(bookings) {
     }
     return { thisMonth, oneMonth, sixMonths };
 }
+function calculateTotalEarnings(earnings) {
+    let totalEarnings = 0;
+    for (const earning of earnings) {
+        if (earning) {
+            totalEarnings += earning;
+        }
+    }
+    return totalEarnings;
+}
 exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.CarsSchema.safeParse(req.body);
     if (!parsedData.success) {
@@ -310,6 +319,80 @@ exports.carRouter.delete("/:id", middleware_1.middleware, (req, res) => __awaite
         return;
     }
     catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.get("/update-earnings/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const cars = yield src_1.default.car.findMany({
+            include: {
+                bookings: true,
+            },
+        });
+        if (!cars) {
+            res.status(404).json({ message: "No Cars found" });
+            return;
+        }
+        for (const car of cars) {
+            const totalEarnings = calculateTotalEarnings(car.bookings.map((booking) => booking.totalEarnings));
+            yield src_1.default.car.update({
+                data: {
+                    totalEarnings: totalEarnings,
+                },
+                where: {
+                    id: car.id,
+                },
+            });
+        }
+        res.json({
+            message: "Car earnings updated successfully",
+        });
+        return;
+    }
+    catch (e) {
+        console.error("Erros:", e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.put("/update-earnings/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            },
+            include: {
+                bookings: true,
+            },
+        });
+        if (!car) {
+            res.status(404).json({ message: "Car not found" });
+            return;
+        }
+        const totalEarnings = calculateTotalEarnings(car.bookings.map((booking) => booking.totalEarnings));
+        yield src_1.default.car.update({
+            data: {
+                totalEarnings: totalEarnings,
+            },
+            where: {
+                id: parseInt(req.params.id),
+            },
+        });
+        res.json({
+            message: "Car earnings updated successfully",
+            CarId: car.id,
+        });
+        return;
+    }
+    catch (e) {
+        console.error("Erros:", e);
         res.status(400).json({
             message: "Internal server error",
             error: e,

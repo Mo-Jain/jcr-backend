@@ -51,6 +51,17 @@ function calculateEarnings(bookings: Booking[]) {
   return { thisMonth, oneMonth, sixMonths };
 }
 
+function calculateTotalEarnings(earnings: (number|null)[]) {
+  let totalEarnings = 0;
+  for (const earning of earnings) {
+    if (earning) {
+      totalEarnings += earning;
+    }
+  }
+
+  return totalEarnings;
+}
+
 carRouter.post("/", middleware, async (req, res) => {
   const parsedData = CarsSchema.safeParse(req.body);
   if (!parsedData.success) {
@@ -338,6 +349,86 @@ carRouter.delete("/:id", middleware, async (req, res) => {
     });
     return;
   } catch (e) {
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+carRouter.get("/update-earnings/all", middleware, async (req, res) => {
+  try {
+    const cars = await client.car.findMany({
+      include: {
+        bookings: true,
+      },
+    });
+
+    if (!cars) {
+      res.status(404).json({ message: "No Cars found" }); 
+      return;
+    }
+
+    for (const car of cars) {
+      const totalEarnings = calculateTotalEarnings(car.bookings.map((booking) => booking.totalEarnings));
+
+      await client.car.update({
+        data: {
+          totalEarnings: totalEarnings,
+        },
+        where: {
+          id: car.id,
+        },
+      });
+    }
+    res.json({
+      message: "Car earnings updated successfully",
+    });
+    return;
+  } catch (e) {
+    console.error("Erros:", e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+  
+
+carRouter.put("/update-earnings/:id", middleware, async (req, res) => {
+  try {
+    const car = await client.car.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+      },
+      include: {
+        bookings: true,
+      },
+    });
+
+    if (!car) {
+      res.status(404).json({ message: "Car not found" });
+      return;
+    }
+
+    const totalEarnings = calculateTotalEarnings(car.bookings.map((booking) => booking.totalEarnings));
+
+    await client.car.update({
+      data: {
+        totalEarnings: totalEarnings,
+      },
+      where: {
+        id: parseInt(req.params.id),
+      },
+    });
+    res.json({
+      message: "Car earnings updated successfully",
+      CarId: car.id,
+    });
+    return;
+  } catch (e) {
+    console.error("Erros:", e);
     res.status(400).json({
       message: "Internal server error",
       error: e,

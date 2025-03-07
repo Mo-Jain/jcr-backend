@@ -706,6 +706,20 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
       },
     });
 
+    if(booking.status.toLocaleLowerCase() !== "completed" && booking.totalEarnings) {
+      await client.car.update({
+        where: {
+          id: booking.carId,
+          userId: req.userId!,
+        },
+        data: {
+          totalEarnings: {
+            decrement: booking.totalEarnings,
+          },
+        },
+      });
+    };
+
     if (booking.selfieUrl) {
       await deleteFile(booking.selfieUrl);
     }
