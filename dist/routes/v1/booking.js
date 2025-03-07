@@ -519,14 +519,16 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 });
             }
         }
-        for (const carImage of parsedData.data.carImages) {
-            yield src_1.default.carImages.create({
-                data: {
-                    name: carImage.name,
-                    url: carImage.url,
-                    bookingId: booking.id,
-                },
-            });
+        if (parsedData.data.carImages) {
+            for (const carImage of parsedData.data.carImages) {
+                yield src_1.default.carImages.create({
+                    data: {
+                        name: carImage.name,
+                        url: carImage.url,
+                        bookingId: booking.id,
+                    },
+                });
+            }
         }
         res.json({
             message: "Booking started successfully",

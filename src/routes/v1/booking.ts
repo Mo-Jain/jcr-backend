@@ -565,15 +565,16 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         });
       }
     }
-
-    for (const carImage of parsedData.data.carImages) {
-      await client.carImages.create({
-        data: {
-          name: carImage.name,
-          url: carImage.url,
-          bookingId: booking.id,
-        },
-      });
+    if(parsedData.data.carImages){
+      for (const carImage of parsedData.data.carImages) {
+        await client.carImages.create({
+          data: {
+            name: carImage.name,
+            url: carImage.url,
+            bookingId: booking.id,
+          },
+        });
+      }
     }
 
     res.json({
