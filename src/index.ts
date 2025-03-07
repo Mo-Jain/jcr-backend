@@ -3,6 +3,7 @@ import { router } from "./routes/v1";
 import cors from "cors";
 const app = express();
 import dotenv from "dotenv";
+const port = process.env.PORT || 3001;
 
 // Load environment variables
 dotenv.config();
@@ -12,4 +13,4 @@ app.use(express.json());
 
 app.use("/api/v1", router);
 
-app.listen(3001, () => console.log("Server running on port 3001"));
+app.listen(port, () => console.log("Server running on port", port));
