@@ -152,6 +152,7 @@ export const CustomerCreateSchema = z.object({
   contact: z.string(),
   address: z.string(),
   folderId: z.string(),
+  joiningDate: z.string(),
   documents: z.array(DocumentSchema).optional(),
 });
 
@@ -160,6 +161,7 @@ export const CustomerUpdateSchema = z.object({
   contact: z.string(),
   address: z.string(),
   folderId: z.string().optional(),
+  joiningDate: z.string().optional(),
   documents: z.array(DocumentSchema).optional(),
 });
 

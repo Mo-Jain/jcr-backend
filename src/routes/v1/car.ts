@@ -100,8 +100,19 @@ carRouter.post("/", middleware, async (req, res) => {
 
 carRouter.get("/all", middleware, async (req, res) => {
   try {
-    const cars = await client.car.findMany();
-    const formatedCars = cars.map((car) => {
+    const cars = await client.car.findMany({
+      include: {
+        bookings: true,
+      },
+    });
+
+    const currMonth = new Date().getMonth();
+    const currYear = new Date().getFullYear();
+    
+    let formatedCars = cars.map((car) => {
+      const bookings = car.bookings.filter((booking) => {
+        return booking.status.toLowerCase() === "upcoming" || booking.status.toLowerCase() === "ongoing";
+      });
       return {
         id: car.id,
         brand: car.brand,
@@ -110,8 +121,11 @@ carRouter.get("/all", middleware, async (req, res) => {
         imageUrl: car.imageUrl,
         colorOfBooking: car.colorOfBooking,
         price: car.price,
+        bookingLength: bookings.length,
       };
     });
+
+    formatedCars = formatedCars.sort((a, b) => b.bookingLength - a.bookingLength);
     
     res.json({
       message: "Cars fetched successfully",
@@ -436,3 +450,46 @@ carRouter.put("/update-earnings/:id", middleware, async (req, res) => {
     return;
   }
 });
+
+carRouter.get("/new-customer/:id", middleware, async (req, res) => {  
+  try {
+    const car = await client.car.findFirst({
+      where: {
+        id: Number(req.params.id),
+      },
+      include: {
+        bookings: {
+          include: {
+            customer: true,
+          },
+        },
+      },
+    });
+    if (!car) {
+      res.status(400).json({ message: "Car not found" });
+      return;
+    }
+    let count =0;
+    car.bookings.forEach((booking) => {
+      const joiningDate = new Date(booking.customer.joiningDate);
+      const currDate = new Date();
+      if(joiningDate.getMonth()===currDate.getMonth() && joiningDate.getFullYear()===currDate.getFullYear()){
+        count++;
+      }
+    });
+  
+    
+    res.json({
+      message: "Customer fetched successfully",
+      newCustomers: count,
+    });
+    return;
+  } catch (e) {
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+

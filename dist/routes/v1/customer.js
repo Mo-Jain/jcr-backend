@@ -66,6 +66,7 @@ exports.customerRouter.post("/", middleware_1.middleware, (req, res) => __awaite
                 contact: parsedData.data.contact,
                 address: parsedData.data.address,
                 folderId: parsedData.data.folderId,
+                joiningDate: parsedData.data.joiningDate,
             },
             include: {
                 documents: true,
@@ -145,6 +146,7 @@ exports.customerRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
                 contact: parsedData.data.contact,
                 address: parsedData.data.address,
                 folderId: parsedData.data.folderId,
+                joiningDate: parsedData.data.joiningDate,
             },
             where: {
                 id: customer.id,
@@ -283,6 +285,46 @@ exports.customerRouter.delete("/document/:id", middleware_1.middleware, (req, re
     }
     catch (e) {
         console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.put("/set-joining-date/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const bookings = yield src_1.default.booking.findMany({
+            include: {
+                customer: true,
+            },
+        });
+        const customers = [];
+        for (const booking of bookings) {
+            const customer = booking.customer;
+            const joiningDate = new Date(customer.joiningDate);
+            console.log("joiningDate.getFullYear()", joiningDate.getFullYear());
+            const startDate = new Date(booking.startDate);
+            console.log("startDate", startDate.toLocaleDateString("en-US"));
+            if (joiningDate.getFullYear() === 2026) {
+                customers.push(customer);
+                yield src_1.default.customer.update({
+                    where: {
+                        id: customer.id,
+                    },
+                    data: {
+                        joiningDate: startDate.toLocaleDateString("en-US"),
+                    },
+                });
+            }
+        }
+        res.json({
+            message: "Customer Joining date updated successfully",
+            customers
+        });
+        return;
+    }
+    catch (e) {
         res.status(400).json({
             message: "Internal server error",
             error: e,

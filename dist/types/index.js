@@ -141,6 +141,7 @@ exports.CustomerCreateSchema = zod_1.default.object({
     contact: zod_1.default.string(),
     address: zod_1.default.string(),
     folderId: zod_1.default.string(),
+    joiningDate: zod_1.default.string(),
     documents: zod_1.default.array(DocumentSchema).optional(),
 });
 exports.CustomerUpdateSchema = zod_1.default.object({
@@ -148,5 +149,6 @@ exports.CustomerUpdateSchema = zod_1.default.object({
     contact: zod_1.default.string(),
     address: zod_1.default.string(),
     folderId: zod_1.default.string().optional(),
+    joiningDate: zod_1.default.string().optional(),
     documents: zod_1.default.array(DocumentSchema).optional(),
 });

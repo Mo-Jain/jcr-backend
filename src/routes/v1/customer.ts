@@ -62,6 +62,7 @@ customerRouter.post("/", middleware, async (req, res) => {
         contact: parsedData.data.contact,
         address: parsedData.data.address,
         folderId: parsedData.data.folderId,
+        joiningDate: parsedData.data.joiningDate,
       },
       include: {
         documents: true,
@@ -148,6 +149,7 @@ customerRouter.put("/:id", middleware, async (req, res) => {
         contact: parsedData.data.contact,
         address: parsedData.data.address,
         folderId: parsedData.data.folderId,
+        joiningDate: parsedData.data.joiningDate,
       },
       where: {
         id: customer.id,
@@ -299,6 +301,48 @@ customerRouter.delete("/document/:id", middleware, async (req, res) => {
     return;
   } catch (e) {
     console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+customerRouter.put("/set-joining-date/all",middleware, async (req, res) => {
+  try {
+    const bookings = await client.booking.findMany({
+      include: {
+        customer: true,
+      },
+    });
+
+    const customers = []
+    for (const booking of bookings) {
+      const customer = booking.customer;
+      const joiningDate = new Date(customer.joiningDate);
+      console.log("joiningDate.getFullYear()",joiningDate.getFullYear());
+      const startDate = new Date(booking.startDate);
+      console.log("startDate",startDate.toLocaleDateString("en-US"));
+      if (joiningDate.getFullYear() === 2026){
+        customers.push(customer);
+        await client.customer.update({
+          where: {
+            id: customer.id,
+          },
+          data: {
+            joiningDate: startDate.toLocaleDateString("en-US"),
+          },
+        });
+      }
+    }
+
+    res.json({
+      message: "Customer Joining date updated successfully",
+      customers
+    });
+    return;
+  } catch (e) {
     res.status(400).json({
       message: "Internal server error",
       error: e,

@@ -89,6 +89,7 @@ model Customer {
   imageUrl                String?
   folderId                String
   address                 String?
+  joiningDate             String
   bookings                Booking[]
   documents               Document[]
   @@unique([name, contact])

@@ -85,6 +85,7 @@ bookingRouter.post("/", middleware, async (req, res) => {
           name: parsedData.data.customerName,
           contact: parsedData.data.customerContact,
           folderId: folder.folderId,
+          joiningDate: new Date().toLocaleDateString("en-US"),
         },
       });
       customerId = customer.id;
@@ -835,6 +836,7 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
             contact: data.customerContact,
             address: data.customerAddress,
             folderId: folder.folderId,
+            joiningDate: new Date().toLocaleDateString("en-US"),
           },
         });
       }
@@ -970,3 +972,4 @@ bookingRouter.delete("/selfie-url/:id", middleware, async (req, res) => {
     return;
   }
 });
+

@@ -75,6 +75,7 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
                     name: parsedData.data.customerName,
                     contact: parsedData.data.customerContact,
                     folderId: folder.folderId,
+                    joiningDate: new Date().toLocaleDateString("en-US"),
                 },
             });
             customerId = customer.id;
@@ -744,6 +745,7 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
                         contact: data.customerContact,
                         address: data.customerAddress,
                         folderId: folder.folderId,
+                        joiningDate: new Date().toLocaleDateString("en-US"),
                     },
                 });
             }

@@ -91,8 +91,17 @@ exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(voi
 }));
 exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const cars = yield src_1.default.car.findMany();
-        const formatedCars = cars.map((car) => {
+        const cars = yield src_1.default.car.findMany({
+            include: {
+                bookings: true,
+            },
+        });
+        const currMonth = new Date().getMonth();
+        const currYear = new Date().getFullYear();
+        let formatedCars = cars.map((car) => {
+            const bookings = car.bookings.filter((booking) => {
+                return booking.status.toLowerCase() === "upcoming" || booking.status.toLowerCase() === "ongoing";
+            });
             return {
                 id: car.id,
                 brand: car.brand,
@@ -101,8 +110,10 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
                 imageUrl: car.imageUrl,
                 colorOfBooking: car.colorOfBooking,
                 price: car.price,
+                bookingLength: bookings.length,
             };
         });
+        formatedCars = formatedCars.sort((a, b) => b.bookingLength - a.bookingLength);
         res.json({
             message: "Cars fetched successfully",
             cars: formatedCars,
@@ -393,6 +404,46 @@ exports.carRouter.put("/update-earnings/:id", middleware_1.middleware, (req, res
     }
     catch (e) {
         console.error("Erros:", e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.get("/new-customer/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: Number(req.params.id),
+            },
+            include: {
+                bookings: {
+                    include: {
+                        customer: true,
+                    },
+                },
+            },
+        });
+        if (!car) {
+            res.status(400).json({ message: "Car not found" });
+            return;
+        }
+        let count = 0;
+        car.bookings.forEach((booking) => {
+            const joiningDate = new Date(booking.customer.joiningDate);
+            const currDate = new Date();
+            if (joiningDate.getMonth() === currDate.getMonth() && joiningDate.getFullYear() === currDate.getFullYear()) {
+                count++;
+            }
+        });
+        res.json({
+            message: "Customer fetched successfully",
+            newCustomers: count,
+        });
+        return;
+    }
+    catch (e) {
         res.status(400).json({
             message: "Internal server error",
             error: e,
