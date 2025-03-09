@@ -339,6 +339,15 @@ exports.carRouter.delete("/:id", middleware_1.middleware, (req, res) => __awaite
 }));
 exports.carRouter.get("/update-earnings/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(400).json({ message: "User not found" });
+            return;
+        }
         const cars = yield src_1.default.car.findMany({
             include: {
                 bookings: true,
@@ -411,12 +420,18 @@ exports.carRouter.put("/update-earnings/:id", middleware_1.middleware, (req, res
         return;
     }
 }));
-exports.carRouter.get("/new-customer/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.carRouter.get("/customer/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const car = yield src_1.default.car.findFirst({
+        const user = yield src_1.default.user.findFirst({
             where: {
-                id: Number(req.params.id),
+                id: req.userId,
             },
+        });
+        if (!user) {
+            res.status(400).json({ message: "User not found" });
+            return;
+        }
+        const cars = yield src_1.default.car.findMany({
             include: {
                 bookings: {
                     include: {
@@ -425,21 +440,39 @@ exports.carRouter.get("/new-customer/:id", middleware_1.middleware, (req, res) =
                 },
             },
         });
-        if (!car) {
+        if (!cars) {
             res.status(400).json({ message: "Car not found" });
             return;
         }
-        let count = 0;
-        car.bookings.forEach((booking) => {
-            const joiningDate = new Date(booking.customer.joiningDate);
-            const currDate = new Date();
-            if (joiningDate.getMonth() === currDate.getMonth() && joiningDate.getFullYear() === currDate.getFullYear()) {
-                count++;
-            }
-        });
+        const formatedCars = [];
+        for (const car of cars) {
+            let count = 0;
+            // Get the current date
+            const currentDate = new Date();
+            // Find the start of the first month (two months ago from current)
+            const startOfMonthThree = new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1);
+            // Filter bookings
+            const filteredBookings = car.bookings.filter(booking => {
+                const bookingDate = new Date(booking.startDate);
+                return bookingDate >= startOfMonthThree && bookingDate <= currentDate;
+            });
+            const uniqueCustomers = Array.from(filteredBookings.reduce((map, booking) => {
+                map.set(booking.customer.id, booking.customer);
+                return map;
+            }, new Map()).values());
+            formatedCars.push({
+                id: car.id,
+                brand: car.brand,
+                model: car.model,
+                plateNumber: car.plateNumber,
+                imageUrl: car.imageUrl,
+                totalCustomers: filteredBookings.length,
+                uniqueCustomers: uniqueCustomers.length,
+            });
+        }
         res.json({
             message: "Customer fetched successfully",
-            newCustomers: count,
+            cars: formatedCars,
         });
         return;
     }
