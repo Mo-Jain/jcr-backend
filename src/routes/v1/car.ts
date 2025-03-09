@@ -106,8 +106,6 @@ carRouter.get("/all", middleware, async (req, res) => {
       },
     });
 
-    const currMonth = new Date().getMonth();
-    const currYear = new Date().getFullYear();
     
     let formatedCars = cars.map((car) => {
       const ongoingBooking = car.bookings.filter((booking) => {
@@ -134,7 +132,7 @@ carRouter.get("/all", middleware, async (req, res) => {
       const sumB = b.ongoingBooking + b.upcomingBooking;
       return sumB - sumA; // Sort in descending order (highest sum first)
     });
-    
+
     res.json({
       message: "Cars fetched successfully",
       cars: formatedCars,
@@ -531,6 +529,8 @@ carRouter.get("/customer/all", middleware, async (req, res) => {
         uniqueCustomers: uniqueCustomers.length,
       });
     }
+
+    formatedCars.sort((a, b) => a.totalCustomers - b.totalCustomers);
     
     res.json({
       message: "Customer fetched successfully",

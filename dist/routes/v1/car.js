@@ -96,8 +96,6 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
                 bookings: true,
             },
         });
-        const currMonth = new Date().getMonth();
-        const currYear = new Date().getFullYear();
         let formatedCars = cars.map((car) => {
             const ongoingBooking = car.bookings.filter((booking) => {
                 return booking.status.toLowerCase() === "ongoing";
@@ -478,6 +476,7 @@ exports.carRouter.get("/customer/all", middleware_1.middleware, (req, res) => __
                 uniqueCustomers: uniqueCustomers.length,
             });
         }
+        formatedCars.sort((a, b) => a.totalCustomers - b.totalCustomers);
         res.json({
             message: "Customer fetched successfully",
             cars: formatedCars,
