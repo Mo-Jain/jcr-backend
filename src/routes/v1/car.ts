@@ -530,7 +530,7 @@ carRouter.get("/customer/all", middleware, async (req, res) => {
       });
     }
 
-    formatedCars.sort((a, b) => a.totalCustomers - b.totalCustomers);
+    formatedCars.sort((a, b) => b.totalCustomers - a.totalCustomers);
     
     res.json({
       message: "Customer fetched successfully",
