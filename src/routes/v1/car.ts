@@ -110,8 +110,11 @@ carRouter.get("/all", middleware, async (req, res) => {
     const currYear = new Date().getFullYear();
     
     let formatedCars = cars.map((car) => {
-      const bookings = car.bookings.filter((booking) => {
-        return booking.status.toLowerCase() === "upcoming" || booking.status.toLowerCase() === "ongoing";
+      const ongoingBooking = car.bookings.filter((booking) => {
+        return  booking.status.toLowerCase() === "ongoing";
+      });
+      const upcomingBooking = car.bookings.filter((booking) => {
+        return booking.status.toLowerCase() === "upcoming" ;
       });
       return {
         id: car.id,
@@ -121,11 +124,16 @@ carRouter.get("/all", middleware, async (req, res) => {
         imageUrl: car.imageUrl,
         colorOfBooking: car.colorOfBooking,
         price: car.price,
-        bookingLength: bookings.length,
+        ongoingBooking: ongoingBooking.length,
+        upcomingBooking: upcomingBooking.length,
       };
     });
 
-    formatedCars = formatedCars.sort((a, b) => b.bookingLength - a.bookingLength);
+    formatedCars = formatedCars.sort((a, b) => {
+      const sumA = a.ongoingBooking + a.upcomingBooking;
+      const sumB = b.ongoingBooking + b.upcomingBooking;
+      return sumB - sumA; // Sort in descending order (highest sum first)
+    });
     
     res.json({
       message: "Cars fetched successfully",
