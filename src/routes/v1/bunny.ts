@@ -1,11 +1,9 @@
 import multer from "multer";
 import { Router } from "express";
 import { middleware } from "../../middleware";
-import client from "../../store/src";
 import axios from "axios";
 import path from "path"
 import mime from 'mime-types';
-import { Readable } from "stream";
 import fs from "fs";
 const ACCESS_KEY = process.env.ACCESS_KEY;
 const HOSTNAME = process.env.HOSTNAME;
@@ -97,10 +95,3 @@ bunnyRouter.post("/upload", middleware, multerParse.fields([
 
 })
 
-function BufferToStream(buffer: Buffer) {
-    const stream = new Readable();
-    stream.push(buffer);
-    stream.push(null);
-    return stream;
-  }
-  
