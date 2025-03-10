@@ -7,6 +7,7 @@ import { carRouter } from "./car";
 import { bookingRouter } from "./booking";
 import { calendarRouter } from "./calendar";
 import { customerRouter } from "./customer";
+import { bunnyRouter } from "./bunny";
 import client from "../../store/src";
 import { deleteFile } from "./delete";
 
@@ -197,3 +198,4 @@ router.use("/car", carRouter);
 router.use("/booking", bookingRouter);
 router.use("/calendar", calendarRouter);
 router.use("/customer", customerRouter);
+router.use('/bunny', bunnyRouter);
