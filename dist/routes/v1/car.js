@@ -476,7 +476,7 @@ exports.carRouter.get("/customer/all", middleware_1.middleware, (req, res) => __
                 uniqueCustomers: uniqueCustomers.length,
             });
         }
-        formatedCars.sort((a, b) => a.totalCustomers - b.totalCustomers);
+        formatedCars.sort((a, b) => b.totalCustomers - a.totalCustomers);
         res.json({
             message: "Customer fetched successfully",
             cars: formatedCars,
