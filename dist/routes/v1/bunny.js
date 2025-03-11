@@ -19,7 +19,6 @@ const middleware_1 = require("../../middleware");
 const axios_1 = __importDefault(require("axios"));
 const path_1 = __importDefault(require("path"));
 const mime_types_1 = __importDefault(require("mime-types"));
-const stream_1 = require("stream");
 const fs_1 = __importDefault(require("fs"));
 const ACCESS_KEY = process.env.ACCESS_KEY;
 const HOSTNAME = process.env.HOSTNAME;
@@ -90,9 +89,3 @@ exports.bunnyRouter.post("/upload", middleware_1.middleware, multerParse.fields(
         });
     }
 }));
-function BufferToStream(buffer) {
-    const stream = new stream_1.Readable();
-    stream.push(buffer);
-    stream.push(null);
-    return stream;
-}

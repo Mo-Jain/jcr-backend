@@ -10,6 +10,7 @@ exports.SignupSchema = zod_1.default.object({
     username: zod_1.default.string(),
     password: zod_1.default.string(),
     name: zod_1.default.string(),
+    imageUrl: zod_1.default.string().url().optional(),
 });
 exports.SigninSchema = zod_1.default.object({
     username: zod_1.default.string(),

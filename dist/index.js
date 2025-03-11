@@ -18,6 +18,6 @@ app.get("/", (req, res) => {
 });
 app.use("/api/v1", v1_1.router);
 // Start server
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

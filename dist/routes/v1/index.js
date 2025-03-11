@@ -25,6 +25,9 @@ const customer_1 = require("./customer");
 const bunny_1 = require("./bunny");
 const src_1 = __importDefault(require("../../store/src"));
 const delete_1 = require("./delete");
+const dotenv_1 = __importDefault(require("dotenv"));
+// Load environment variables
+dotenv_1.default.config();
 exports.router = (0, express_1.Router)();
 exports.router.post("/signup/se23crt1", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // check the user
@@ -41,6 +44,8 @@ exports.router.post("/signup/se23crt1", (req, res) => __awaiter(void 0, void 0, 
                 username: parsedData.data.username,
                 password: parsedData.data.password,
                 name: parsedData.data.name,
+                profileFolderId: process.env.PROFILE_FOLDER_ID,
+                imageUrl: parsedData.data.imageUrl,
             },
         });
         const token = jsonwebtoken_1.default.sign({
@@ -51,6 +56,7 @@ exports.router.post("/signup/se23crt1", (req, res) => __awaiter(void 0, void 0, 
             message: "User created successfully",
             token,
             name: user.name,
+            id: user.id,
         });
         return;
     }
@@ -100,6 +106,40 @@ exports.router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, f
         return;
     }
 }));
+exports.router.get("/users", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const users = yield src_1.default.user.findMany();
+        res.json({
+            message: "Users fetched successfully",
+            users: users.map(user => user.username)
+        });
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+    }
+}));
+exports.router.get("/users/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (req.userId !== 1) {
+            res.status(403).json({ message: "You are not authorized to perform this operation" });
+            return;
+        }
+        const users = yield src_1.default.user.findMany();
+        res.json({
+            message: "Users fetched successfully",
+            users
+        });
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+    }
+}));
 exports.router.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = yield src_1.default.user.findFirst({
@@ -113,7 +153,9 @@ exports.router.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 
         }
         res.json({
             message: "User fetched successfully",
-            user,
+            id: user.id,
+            name: user.name,
+            imageUrl: user.imageUrl,
         });
         return;
     }
@@ -179,6 +221,81 @@ exports.router.put("/me", middleware_1.middleware, (req, res) => __awaiter(void 
         }
         res.json({
             message: "User data updated successfully",
+        });
+        return;
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.router.put("/user/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.UpdateUserSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res.status(403).json({ message: "Wrong Input type" });
+        return;
+    }
+    try {
+        if (req.userId !== 1) {
+            res.status(403).json({ message: "You are not authorized to perform this operation" });
+            return;
+        }
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            },
+        });
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        yield src_1.default.user.update({
+            where: {
+                id: parseInt(req.params.id),
+            },
+            data: Object.assign({}, parsedData.data),
+        });
+        if (parsedData.data.imageUrl && user.imageUrl) {
+            yield (0, delete_1.deleteFile)(user.imageUrl);
+        }
+        res.json({
+            message: "User data updated successfully",
+        });
+        return;
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.router.delete("/user/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (req.userId !== 1) {
+            res.status(403).json({ message: "You are not authorized to perform this operation" });
+            return;
+        }
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            },
+        });
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        yield src_1.default.user.delete({
+            where: {
+                id: parseInt(req.params.id),
+            },
+        });
+        res.json({
+            message: "User deleted successfully",
         });
         return;
     }

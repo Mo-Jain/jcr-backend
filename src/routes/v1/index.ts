@@ -10,6 +10,10 @@ import { customerRouter } from "./customer";
 import { bunnyRouter } from "./bunny";
 import client from "../../store/src";
 import { deleteFile } from "./delete";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 export const router = Router();
 
@@ -29,6 +33,8 @@ router.post("/signup/se23crt1", async (req, res) => {
         username: parsedData.data.username,
         password: parsedData.data.password,
         name: parsedData.data.name,
+        profileFolderId: process.env.PROFILE_FOLDER_ID,
+        imageUrl: parsedData.data.imageUrl,
       },
     });
     const token = jwt.sign(
@@ -43,6 +49,7 @@ router.post("/signup/se23crt1", async (req, res) => {
       message: "User created successfully",
       token,
       name: user.name,
+      id: user.id,
     });
     return;
   } catch (e) {
@@ -98,6 +105,39 @@ router.post("/signin", async (req, res) => {
     return;
   }
 });
+router.get("/users", async (req, res) => {
+  try{
+    const users = await client.user.findMany();
+    res.json({
+      message:"Users fetched successfully",
+      users : users.map(user => user.username)
+    })
+  }catch(e){
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+  }
+})
+
+router.get("/users/all",middleware, async (req, res) => {
+  try{
+    if(req.userId !== 1) {
+      res.status(403).json({ message: "You are not authorized to perform this operation" });
+      return
+    }
+    const users = await client.user.findMany();
+    res.json({
+      message:"Users fetched successfully",
+      users 
+    })
+  }catch(e){
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+  }
+})
 
 router.get("/me", middleware, async (req, res) => {
   try {
@@ -113,7 +153,9 @@ router.get("/me", middleware, async (req, res) => {
     }
     res.json({
       message: "User fetched successfully",
-      user,
+      id: user.id,
+      name: user.name,
+      imageUrl: user.imageUrl,
     });
     return;
   } catch (e) {
@@ -178,9 +220,11 @@ router.put("/me", middleware, async (req, res) => {
         ...parsedData.data,
       },
     });
+
     if (parsedData.data.imageUrl && user.imageUrl) {
       await deleteFile(user.imageUrl);
     }
+
     res.json({
       message: "User data updated successfully",
     });
@@ -193,6 +237,88 @@ router.put("/me", middleware, async (req, res) => {
     return;
   }
 });
+
+router.put("/user/:id", middleware, async (req, res) => {
+    const parsedData = UpdateUserSchema.safeParse(req.body);
+    if (!parsedData.success) {
+      res.status(403).json({ message: "Wrong Input type" });
+      return;
+    }
+    try {
+      if(req.userId !== 1) {
+        res.status(403).json({ message: "You are not authorized to perform this operation" });
+        return
+      }
+
+      const user = await client.user.findFirst({
+        where: {
+          id: parseInt(req.params.id),
+        },
+      });
+      
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      await client.user.update({
+        where: {
+          id: parseInt(req.params.id),
+        },
+        data: {
+          ...parsedData.data,
+        },
+      });
+
+      if (parsedData.data.imageUrl && user.imageUrl) {
+        await deleteFile(user.imageUrl);
+      }
+      res.json({
+        message: "User data updated successfully",
+      });
+      return;
+    } catch (e) {
+      res.status(400).json({
+        message: "Internal server error",
+        error: e,
+      });
+      return;
+    }
+  });
+
+router.delete("/user/:id", middleware, async (req, res) => {
+    try {
+      if(req.userId !== 1) {
+        res.status(403).json({ message: "You are not authorized to perform this operation" });
+        return
+      }
+      const user = await client.user.findFirst({
+        where: {
+          id: parseInt(req.params.id),
+        },
+      });
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      await client.user.delete({
+        where: {
+          id: parseInt(req.params.id),
+        },
+      });
+      res.json({
+        message: "User deleted successfully",
+      });
+      return;
+    } catch (e) {
+      res.status(400).json({
+        message: "Internal server error",
+        error: e,
+      });
+      return;
+    }
+  });
+
+
 
 router.use("/car", carRouter);
 router.use("/booking", bookingRouter);
