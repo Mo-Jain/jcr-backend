@@ -156,6 +156,7 @@ exports.router.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 
             id: user.id,
             name: user.name,
             imageUrl: user.imageUrl,
+            user
         });
         return;
     }

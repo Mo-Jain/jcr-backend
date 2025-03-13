@@ -156,6 +156,7 @@ router.get("/me", middleware, async (req, res) => {
       id: user.id,
       name: user.name,
       imageUrl: user.imageUrl,
+      user
     });
     return;
   } catch (e) {
