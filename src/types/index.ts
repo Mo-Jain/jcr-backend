@@ -14,6 +14,12 @@ export const SigninSchema = z.object({
   password: z.string(),
 });
 
+export const customerSignupSchema = z.object({
+  name: z.string(),
+  contact: z.string(),
+  password: z.string(),
+});
+
 export const UpdateUserSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
@@ -31,6 +37,7 @@ export const CarsSchema = z.object({
   mileage: z.number(),
   imageUrl: z.string().url(),
   carFolderId: z.string(),
+  seats: z.number(),
 });
 
 export const CarsUpdateSchema = z.object({
@@ -38,6 +45,7 @@ export const CarsUpdateSchema = z.object({
   price: z.number().optional(),
   mileage: z.number().optional(),
   imageUrl: z.string().url().optional(),
+  seats: z.number().optional(),
 });
 
 export const BookingSchema = z.object({

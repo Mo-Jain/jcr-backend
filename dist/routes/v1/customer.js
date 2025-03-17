@@ -19,6 +19,8 @@ const middleware_1 = require("../../middleware");
 const types_1 = require("../../types");
 const folder_1 = require("./folder");
 const delete_1 = require("./delete");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const config_1 = require("../../config");
 exports.customerRouter = (0, express_1.Router)();
 exports.customerRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -34,6 +36,129 @@ exports.customerRouter.get("/all", middleware_1.middleware, (req, res) => __awai
         return;
     }
     catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // check the user
+    const parsedData = types_1.customerSignupSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res
+            .status(400)
+            .json({ message: "Wrong Input type", error: parsedData.error });
+        return;
+    }
+    try {
+        const folder = yield (0, folder_1.createFolder)(parsedData.data.name + " " + parsedData.data.contact, "customer");
+        if (!folder.success || !folder.folderId) {
+            res.status(400).json({ message: "Folder creation failed", error: folder.error });
+            return;
+        }
+        let customer = yield src_1.default.customer.findFirst({
+            where: {
+                contact: parsedData.data.contact,
+                name: parsedData.data.name
+            },
+        });
+        if (customer) {
+            res.status(400).json({ message: "Customer already exist" });
+            return;
+        }
+        customer = yield src_1.default.customer.create({
+            data: {
+                name: parsedData.data.name,
+                contact: parsedData.data.contact,
+                password: parsedData.data.password,
+                folderId: folder.folderId,
+                joiningDate: new Date().toLocaleDateString("en-US"),
+            },
+        });
+        const token = jsonwebtoken_1.default.sign({
+            userId: customer.id,
+            name: customer.name,
+        }, config_1.JWT_PASSWORD);
+        res.json({
+            message: "User created successfully",
+            token,
+            id: customer.id,
+            name: customer.name,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        console.log(req.userId);
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!customer) {
+            res.status(404).json({ message: "Customer not found" });
+            return;
+        }
+        res.json({
+            message: "Customer fetched successfully",
+            id: customer.id,
+            name: customer.name,
+            imageUrl: customer.imageUrl,
+            customer
+        });
+        return;
+    }
+    catch (e) {
+        console.log(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.SigninSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res.status(403).json({ message: "Wrong Input type" });
+        return;
+    }
+    try {
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                contact: parsedData.data.username,
+                password: parsedData.data.password,
+            },
+        });
+        if (!customer) {
+            res.status(403).json({ message: "Invalid username or password" });
+            return;
+        }
+        const token = jsonwebtoken_1.default.sign({
+            userId: customer.id,
+            name: customer.name,
+        }, config_1.JWT_PASSWORD);
+        res.json({
+            message: "User signed in successfully",
+            token,
+            id: customer.id,
+            name: customer.name,
+        });
+        return;
+    }
+    catch (e) {
+        console.log(e);
         res.status(400).json({
             message: "Internal server error",
             error: e,

@@ -94,6 +94,7 @@ router.post("/signin", async (req, res) => {
       message: "User signed in successfully",
       token,
       name: user.name,
+      id: user.id,
     });
     return;
   } catch (e) {
@@ -105,12 +106,12 @@ router.post("/signin", async (req, res) => {
     return;
   }
 });
-router.get("/users", async (req, res) => {
+router.get("/admins", async (req, res) => {
   try{
     const users = await client.user.findMany();
     res.json({
       message:"Users fetched successfully",
-      users : users.map(user => user.username)
+      usernames : users.map(user => user.username)
     })
   }catch(e){
     res.status(400).json({
@@ -120,7 +121,7 @@ router.get("/users", async (req, res) => {
   }
 })
 
-router.get("/users/all",middleware, async (req, res) => {
+router.get("/admins/all",middleware, async (req, res) => {
   try{
     if(req.userId !== 1) {
       res.status(403).json({ message: "You are not authorized to perform this operation" });
@@ -129,7 +130,7 @@ router.get("/users/all",middleware, async (req, res) => {
     const users = await client.user.findMany();
     res.json({
       message:"Users fetched successfully",
-      users 
+      admins: users 
     })
   }catch(e){
     res.status(400).json({

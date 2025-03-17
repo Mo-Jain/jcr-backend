@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc -b",
+    "build": "cd src/store && npx prisma generate && cd ../../ && npx tsc -b",
+    "build:dev": "npx tsc -b",
     "start:dev": "nodemon dist/index.js",
     "start": "pm2 start dist/index.js",
-    "dev": "npm run build && npm run start"
+    "dev": "npm run build:dev && npm run start:dev"
   },
   "keywords": [],
   "author": "",
@@ -39,5 +40,6 @@
     "socket.io": "^4.8.1",
     "typescript": "^5.6.3",
     "zod": "^3.23.8"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

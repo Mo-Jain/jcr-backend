@@ -73,6 +73,7 @@ exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(voi
                 imageUrl: parsedData.data.imageUrl,
                 carFolderId: parsedData.data.carFolderId,
                 userId: req.userId,
+                seats: parsedData.data.seats,
             },
         });
         res.json({
@@ -111,6 +112,7 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
                 imageUrl: car.imageUrl,
                 colorOfBooking: car.colorOfBooking,
                 price: car.price,
+                seats: car.seats,
                 ongoingBooking: ongoingBooking.length,
                 upcomingBooking: upcomingBooking.length,
             };
@@ -274,11 +276,14 @@ exports.carRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(v
         const car = yield src_1.default.car.findFirst({
             where: {
                 id: parseInt(req.params.id),
-                userId: req.userId,
             },
         });
         if (!car) {
             res.status(404).json({ message: "Car not found" });
+            return;
+        }
+        if (car.userId !== req.userId && req.userId !== 1) {
+            res.status(403).json({ message: "You are not authorized to perform this operation" });
             return;
         }
         yield src_1.default.car.update({
@@ -287,6 +292,7 @@ exports.carRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                 price: parsedData.data.price,
                 mileage: parsedData.data.mileage,
                 imageUrl: parsedData.data.imageUrl,
+                seats: parsedData.data.seats,
             },
             where: {
                 id: parseInt(req.params.id),

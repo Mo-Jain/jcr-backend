@@ -17,7 +17,14 @@ model User {
   profileFolderId         String?
   bookings                Booking[]
   Cars                    Car[]
+  superAdmin              SuperAdmin[]
 }     
+
+model SuperAdmin {
+  id                      Int     @id @default(autoincrement())
+  userId                  Int
+  user                    User     @relation(fields: [userId], references: [id])
+}
       
 model Car {     
   id                      Int      @id @default(autoincrement())
@@ -32,6 +39,7 @@ model Car {
   totalEarnings           Int?
   carFolderId             String
   odometerReading         String?
+  seats                   Int      @default(4) 
   user                    User     @relation(fields: [userId], references: [id])
   bookings                Booking[]
 }     
@@ -90,6 +98,7 @@ model Customer {
   folderId                String
   address                 String?
   joiningDate             String
+  password                String?
   bookings                Booking[]
   documents               Document[]
   @@unique([name, contact])

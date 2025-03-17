@@ -1,9 +1,11 @@
 import { Router } from "express";
 import client from "../../store/src";
 import { middleware } from "../../middleware";
-import { CustomerCreateSchema, CustomerUpdateSchema } from "../../types";
-import { deleteFolder } from "./folder";
+import { CustomerCreateSchema, customerSignupSchema, CustomerUpdateSchema, SigninSchema } from "../../types";
+import { createFolder, deleteFolder } from "./folder";
 import { deleteFile, deleteMultipleFiles } from "./delete";
+import jwt from "jsonwebtoken";
+import { JWT_PASSWORD } from "../../config";
 
 interface Document {
   id: number;
@@ -27,6 +29,148 @@ customerRouter.get("/all", middleware, async (req, res) => {
     });
     return;
   } catch (e) {
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+customerRouter.post("/signup", async (req, res) => {
+  // check the user
+  const parsedData = customerSignupSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
+    return;
+  }
+
+  try {
+
+    const folder = await createFolder(parsedData.data.name+" "+parsedData.data.contact, "customer");
+    if(!folder.success || !folder.folderId) {
+      res.status(400).json({ message: "Folder creation failed", error: folder.error });
+      return;
+    }
+
+    let customer = await client.customer.findFirst({
+      where: {
+        contact: parsedData.data.contact,
+        name: parsedData.data.name
+      },
+    });
+
+    if(customer) {
+      res.status(400).json({ message: "Customer already exist" });
+      return;
+    }
+
+    
+    customer = await client.customer.create({
+      data: {
+        name: parsedData.data.name,
+        contact: parsedData.data.contact,
+        password: parsedData.data.password,
+        folderId: folder.folderId,
+        joiningDate: new Date().toLocaleDateString("en-US"),
+      },
+    });
+    
+    const token = jwt.sign(
+      {
+        userId: customer.id,
+        name: customer.name,
+      },
+      JWT_PASSWORD,
+    );
+
+    res.json({
+      message: "User created successfully",
+      token,
+      id: customer.id,
+      name: customer.name,
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+customerRouter.get("/me", middleware, async (req, res) => {
+  try {
+    console.log(req.userId);
+    const customer = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+
+    if (!customer) {
+      res.status(404).json({ message: "Customer not found" });
+      return;
+    }
+    res.json({
+      message: "Customer fetched successfully",
+      id: customer.id,
+      name: customer.name,
+      imageUrl: customer.imageUrl,
+      customer
+    });
+    return;
+  } catch (e) {
+    console.log(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+customerRouter.post("/signin", async (req, res) => {
+  const parsedData = SigninSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res.status(403).json({ message: "Wrong Input type" });
+    return;
+  }
+
+  try {
+    const customer = await client.customer.findFirst({
+      where: {
+        contact: parsedData.data.username,
+        password: parsedData.data.password,
+      },
+    });
+
+    if (!customer) {
+      res.status(403).json({ message: "Invalid username or password" });
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        userId: customer.id,
+        name: customer.name,
+      },
+      JWT_PASSWORD,
+    );
+
+    res.json({
+      message: "User signed in successfully",
+      token,
+      id: customer.id,
+      name: customer.name,
+    });
+    return;
+  } catch (e) {
+    console.log(e);
     res.status(400).json({
       message: "Internal server error",
       error: e,

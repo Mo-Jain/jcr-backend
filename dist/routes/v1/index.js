@@ -94,6 +94,7 @@ exports.router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, f
             message: "User signed in successfully",
             token,
             name: user.name,
+            id: user.id,
         });
         return;
     }
@@ -106,12 +107,12 @@ exports.router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, f
         return;
     }
 }));
-exports.router.get("/users", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.router.get("/admins", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const users = yield src_1.default.user.findMany();
         res.json({
             message: "Users fetched successfully",
-            users: users.map(user => user.username)
+            usernames: users.map(user => user.username)
         });
     }
     catch (e) {
@@ -121,7 +122,7 @@ exports.router.get("/users", (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
 }));
-exports.router.get("/users/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.router.get("/admins/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (req.userId !== 1) {
             res.status(403).json({ message: "You are not authorized to perform this operation" });
@@ -130,7 +131,7 @@ exports.router.get("/users/all", middleware_1.middleware, (req, res) => __awaite
         const users = yield src_1.default.user.findMany();
         res.json({
             message: "Users fetched successfully",
-            users
+            admins: users
         });
     }
     catch (e) {

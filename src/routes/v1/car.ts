@@ -82,6 +82,7 @@ carRouter.post("/", middleware, async (req, res) => {
         imageUrl: parsedData.data.imageUrl,
         carFolderId: parsedData.data.carFolderId,
         userId: req.userId!,
+        seats: parsedData.data.seats,
       },
     });
     res.json({
@@ -122,6 +123,7 @@ carRouter.get("/all", middleware, async (req, res) => {
         imageUrl: car.imageUrl,
         colorOfBooking: car.colorOfBooking,
         price: car.price,
+        seats: car.seats,
         ongoingBooking: ongoingBooking.length,
         upcomingBooking: upcomingBooking.length,
       };
@@ -300,13 +302,18 @@ carRouter.put("/:id", middleware, async (req, res) => {
     const car = await client.car.findFirst({
       where: {
         id: parseInt(req.params.id),
-        userId: req.userId!,
       },
     });
+
 
     if (!car) {
       res.status(404).json({ message: "Car not found" });
       return;
+    }
+
+    if(car.userId !== req.userId && req.userId !== 1) {
+      res.status(403).json({ message: "You are not authorized to perform this operation" });
+      return
     }
 
     await client.car.update({
@@ -315,6 +322,7 @@ carRouter.put("/:id", middleware, async (req, res) => {
         price: parsedData.data.price,
         mileage: parsedData.data.mileage,
         imageUrl: parsedData.data.imageUrl,
+        seats: parsedData.data.seats,
       },
       where: {
         id: parseInt(req.params.id),

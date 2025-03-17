@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Car" ADD COLUMN     "seats" INTEGER NOT NULL DEFAULT 4;
