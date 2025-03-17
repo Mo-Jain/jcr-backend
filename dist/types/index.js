@@ -38,6 +38,7 @@ exports.CarsSchema = zod_1.default.object({
     imageUrl: zod_1.default.string().url(),
     carFolderId: zod_1.default.string(),
     seats: zod_1.default.number(),
+    fuel: zod_1.default.string()
 });
 exports.CarsUpdateSchema = zod_1.default.object({
     color: zod_1.default.string().optional(),
@@ -45,6 +46,7 @@ exports.CarsUpdateSchema = zod_1.default.object({
     mileage: zod_1.default.number().optional(),
     imageUrl: zod_1.default.string().url().optional(),
     seats: zod_1.default.number().optional(),
+    fuel: zod_1.default.string().optional()
 });
 exports.BookingSchema = zod_1.default.object({
     startDate: zod_1.default.string(),

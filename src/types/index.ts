@@ -38,6 +38,7 @@ export const CarsSchema = z.object({
   imageUrl: z.string().url(),
   carFolderId: z.string(),
   seats: z.number(),
+  fuel: z.string()
 });
 
 export const CarsUpdateSchema = z.object({
@@ -46,6 +47,7 @@ export const CarsUpdateSchema = z.object({
   mileage: z.number().optional(),
   imageUrl: z.string().url().optional(),
   seats: z.number().optional(),
+  fuel: z.string().optional()
 });
 
 export const BookingSchema = z.object({

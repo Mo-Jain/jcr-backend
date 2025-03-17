@@ -74,6 +74,7 @@ exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(voi
                 carFolderId: parsedData.data.carFolderId,
                 userId: req.userId,
                 seats: parsedData.data.seats,
+                fuel: parsedData.data.fuel
             },
         });
         res.json({
@@ -293,6 +294,7 @@ exports.carRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                 mileage: parsedData.data.mileage,
                 imageUrl: parsedData.data.imageUrl,
                 seats: parsedData.data.seats,
+                fuel: parsedData.data.fuel
             },
             where: {
                 id: parseInt(req.params.id),

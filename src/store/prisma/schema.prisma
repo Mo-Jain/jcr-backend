@@ -40,6 +40,7 @@ model Car {
   carFolderId             String
   odometerReading         String?
   seats                   Int      @default(4) 
+  fuel                    String   @default("petrol")
   user                    User     @relation(fields: [userId], references: [id])
   bookings                Booking[]
 }     

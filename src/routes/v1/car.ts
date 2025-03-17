@@ -83,6 +83,7 @@ carRouter.post("/", middleware, async (req, res) => {
         carFolderId: parsedData.data.carFolderId,
         userId: req.userId!,
         seats: parsedData.data.seats,
+        fuel: parsedData.data.fuel
       },
     });
     res.json({
@@ -323,6 +324,7 @@ carRouter.put("/:id", middleware, async (req, res) => {
         mileage: parsedData.data.mileage,
         imageUrl: parsedData.data.imageUrl,
         seats: parsedData.data.seats,
+        fuel: parsedData.data.fuel
       },
       where: {
         id: parseInt(req.params.id),
