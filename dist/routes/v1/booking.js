@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bookingRouter = void 0;
+exports.bookingRouter = exports.generateBookingId = void 0;
 exports.calculateCost = calculateCost;
 const express_1 = require("express");
 const types_1 = require("../../types");
@@ -50,6 +50,7 @@ const generateBookingId = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     return newId;
 });
+exports.generateBookingId = generateBookingId;
 exports.bookingRouter = (0, express_1.Router)();
 exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.BookingSchema.safeParse(req.body);
@@ -80,7 +81,7 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
             });
             customerId = customer.id;
         }
-        const newBookingId = yield generateBookingId();
+        const newBookingId = yield (0, exports.generateBookingId)();
         const currDate = new Date();
         const unixTimeStamp = Math.floor(currDate.getTime() / 1000);
         const folder = yield (0, folder_1.createFolder)(newBookingId + " " + unixTimeStamp, "booking");
@@ -184,8 +185,15 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             },
         });
         if (!user) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
+            const customer = yield src_1.default.customer.findFirst({
+                where: {
+                    id: req.userId,
+                },
+            });
+            if (!customer && req.userId != 80) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
         }
         const booking = yield src_1.default.booking.findFirst({
             where: {
@@ -400,6 +408,7 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
                         url: document.url,
                         type: document.type,
                         customerId: booking.customerId,
+                        docType: document.docType || "others"
                     },
                 });
                 documents.push({
@@ -516,6 +525,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                         url: document.url,
                         type: document.type,
                         customerId: booking.customerId,
+                        docType: document.docType || "others"
                     },
                 });
             }
@@ -749,7 +759,7 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
                     },
                 });
             }
-            const newBookingId = yield generateBookingId();
+            const newBookingId = yield (0, exports.generateBookingId)();
             const currDate = new Date();
             const unixTimeStamp = Math.floor(currDate.getTime() / 1000);
             const folder = yield (0, folder_1.createFolder)(newBookingId + " " + unixTimeStamp, "booking");

@@ -106,12 +106,28 @@ router.post("/signin", async (req, res) => {
     return;
   }
 });
+
 router.get("/admins", async (req, res) => {
   try{
     const users = await client.user.findMany();
     res.json({
       message:"Users fetched successfully",
       usernames : users.map(user => user.username)
+    })
+  }catch(e){
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+  }
+})
+
+router.get("/users", async (req, res) => {
+  try{
+    const users = await client.customer.findMany();
+    res.json({
+      message:"Users fetched successfully",
+      usernames : users.map(user => user.contact)
     })
   }catch(e){
     res.status(400).json({
@@ -319,7 +335,6 @@ router.delete("/user/:id", middleware, async (req, res) => {
       return;
     }
   });
-
 
 
 router.use("/car", carRouter);

@@ -43,6 +43,7 @@ model Car {
   fuel                    String   @default("petrol")
   user                    User     @relation(fields: [userId], references: [id])
   bookings                Booking[]
+  favoriteCars            FavoriteCar[]
 }     
 
 
@@ -69,7 +70,7 @@ model Booking {
   selfieUrl               String?
   bookingFolderId         String
   carImages               CarImages[]
-  customerId              Int
+  customerId              Int     
   customer                Customer @relation(fields: [customerId], references: [id])
 }
 
@@ -79,6 +80,7 @@ model Document {
   name                    String
   type                    String
   customerId              Int
+  docType                 String
   customer                Customer @relation(fields: [customerId], references: [id])
 }
 
@@ -102,7 +104,17 @@ model Customer {
   password                String?
   bookings                Booking[]
   documents               Document[]
+  favoriteCars            FavoriteCar[]
   @@unique([name, contact])
+}
+
+model FavoriteCar {
+  id                      Int      @id @default(autoincrement())
+  carId                   Int
+  userId                  Int
+  car                     Car      @relation(fields: [carId], references: [id])
+  user                    Customer     @relation(fields: [userId], references: [id])
+  @@unique([carId, userId])
 }
 
 

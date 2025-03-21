@@ -122,6 +122,21 @@ exports.router.get("/admins", (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
 }));
+exports.router.get("/users", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const users = yield src_1.default.customer.findMany();
+        res.json({
+            message: "Users fetched successfully",
+            usernames: users.map(user => user.contact)
+        });
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+    }
+}));
 exports.router.get("/admins/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (req.userId !== 1) {

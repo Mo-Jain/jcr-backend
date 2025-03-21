@@ -102,6 +102,17 @@ carRouter.post("/", middleware, async (req, res) => {
 
 carRouter.get("/all", middleware, async (req, res) => {
   try {
+    const user = await client.user.findFirst({
+      where: {
+        id: req.userId,
+      }
+    });
+    
+    if(!user) {
+      res.status(401).json({message: "Unauthorized"})
+      return;
+    }
+
     const cars = await client.car.findMany({
       include: {
         bookings: true,
@@ -162,6 +173,7 @@ carRouter.get("/:id", middleware, async (req, res) => {
             customer: true,
           },
         },
+        favoriteCars: true,
       },
     });
     if (!car) {
@@ -171,6 +183,7 @@ carRouter.get("/:id", middleware, async (req, res) => {
 
     const formatedCars = {
       ...car,
+      favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
       bookings: car.bookings.map((booking) => {
         return {
           id: booking.id,
@@ -386,6 +399,7 @@ carRouter.delete("/:id", middleware, async (req, res) => {
     return;
   }
 });
+
 carRouter.get("/update-earnings/all", middleware, async (req, res) => {
   try {
 
@@ -435,7 +449,6 @@ carRouter.get("/update-earnings/all", middleware, async (req, res) => {
     return;
   }
 });
-  
 
 carRouter.put("/update-earnings/:id", middleware, async (req, res) => {
   try {

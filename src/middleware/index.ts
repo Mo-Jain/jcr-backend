@@ -8,7 +8,7 @@ export const middleware = (req: Request, res: Response, next: NextFunction) => {
   const token = header?.split(" ")[1];
 
   if (!token) {
-    res.status(403).json({ message: "Unauthorized with token" });
+    res.status(403).json({ message: "Unauthorized with no token" });
     return;
   }
 
@@ -22,7 +22,7 @@ export const middleware = (req: Request, res: Response, next: NextFunction) => {
     req.name = decoded.name;
     next();
   } catch (e) {
-    res.status(403).json({ message: "Unauthorized with no token" });
+    res.status(403).json({ message: "Unauthorized with token" });
     return;
   }
 };

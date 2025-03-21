@@ -50,6 +50,13 @@ export const CarsUpdateSchema = z.object({
   fuel: z.string().optional()
 });
 
+export const FilterCarsSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string(),
+  endTime:z.string()
+})
+
 export const BookingSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
@@ -70,6 +77,7 @@ const DocumentSchema = z.object({
   url: z.string().url(),
   type: z.string(),
   folderId: z.string().optional(),
+  docType: z.string().optional()
 });
 
 export const BookingUpdateSchema = z.object({
@@ -175,6 +183,23 @@ export const CustomerUpdateSchema = z.object({
   joiningDate: z.string().optional(),
   documents: z.array(DocumentSchema).optional(),
 });
+
+export const CustomerBookingSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  allDay: z.boolean(),
+  carId: z.number(),
+  totalAmount: z.number(),
+});
+
+export const CustomerProfileSchema = z.object({
+  name: z.string().optional(),
+  contact: z.string().optional(),
+  password: z.string().optional(),
+  imageUrl: z.string().optional()
+})
 
 declare global {
   namespace Express {

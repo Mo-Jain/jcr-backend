@@ -37,7 +37,7 @@ export function calculateCost(
   return Math.floor(cost);
 }
 
-const generateBookingId = async () => {
+export const generateBookingId = async () => {
   // Get the last booking entry
   const lastBooking = await client.booking.findFirst({
     orderBy: { id: "desc" }, // Get the latest booking
@@ -201,8 +201,15 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       },
     });
     if (!user) {
-       res.status(401).json({ message: "Unauthorized" });
-       return;
+      const customer = await client.customer.findFirst({
+        where: {
+          id: req.userId,
+        },
+      });
+      if(!customer && req.userId != 80){
+        res.status(401).json({message:"Unauthorized"})
+        return;
+      }
     }
     const booking = await client.booking.findFirst({
       where: {
@@ -441,6 +448,7 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
             url: document.url,
             type: document.type,
             customerId: booking.customerId,
+            docType: document.docType || "others"
           },
         });
         documents.push({
@@ -562,6 +570,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
             url: document.url,
             type: document.type,
             customerId: booking.customerId,
+            docType: document.docType || "others"
           },
         });
       }

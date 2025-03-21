@@ -93,6 +93,15 @@ exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(voi
 }));
 exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
         const cars = yield src_1.default.car.findMany({
             include: {
                 bookings: true,
@@ -149,13 +158,14 @@ exports.carRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                         customer: true,
                     },
                 },
+                favoriteCars: true,
             },
         });
         if (!car) {
             res.status(404).json({ message: "Car not found" });
             return;
         }
-        const formatedCars = Object.assign(Object.assign({}, car), { bookings: car.bookings.map((booking) => {
+        const formatedCars = Object.assign(Object.assign({}, car), { favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0, bookings: car.bookings.map((booking) => {
                 return {
                     id: booking.id,
                     start: booking.startDate,

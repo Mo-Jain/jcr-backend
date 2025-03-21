@@ -10,7 +10,7 @@ const middleware = (req, res, next) => {
     const header = req.headers["authorization"];
     const token = header === null || header === void 0 ? void 0 : header.split(" ")[1];
     if (!token) {
-        res.status(403).json({ message: "Unauthorized with token" });
+        res.status(403).json({ message: "Unauthorized with no token" });
         return;
     }
     try {
@@ -20,7 +20,7 @@ const middleware = (req, res, next) => {
         next();
     }
     catch (e) {
-        res.status(403).json({ message: "Unauthorized with no token" });
+        res.status(403).json({ message: "Unauthorized with token" });
         return;
     }
 };
