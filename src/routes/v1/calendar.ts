@@ -2,6 +2,7 @@ import { Router } from "express";
 import { CalendarUpdateSchema } from "../../types";
 import { middleware } from "../../middleware";
 import client from "../../store/src";
+import { formatDate } from "./booking";
 
 export const calendarRouter = Router();
 
@@ -101,9 +102,9 @@ calendarRouter.put("/:id", middleware, async (req, res) => {
     const updateData: Record<string, any> = {};
 
     if (parsedData.data.startDate !== undefined)
-      updateData.startDate = parsedData.data.startDate;
+      updateData.startDate = formatDate(parsedData.data.startDate);
     if (parsedData.data.endDate !== undefined)
-      updateData.endDate = parsedData.data.endDate;
+      updateData.endDate = formatDate(parsedData.data.endDate);
     if (parsedData.data.startTime !== undefined)
       updateData.startTime = parsedData.data.startTime;
     if (parsedData.data.endTime !== undefined)

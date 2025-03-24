@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bookingRouter = exports.generateBookingId = void 0;
+exports.formatDate = formatDate;
 exports.calculateCost = calculateCost;
 const express_1 = require("express");
 const types_1 = require("../../types");
@@ -22,6 +23,13 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const src_1 = __importDefault(require("../../store/src"));
 const delete_1 = require("./delete");
 dotenv_1.default.config();
+function formatDate(date) {
+    return new Date(date).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+}
 function calculateCost(startDate, endDate, startTime, endTime, pricePer24Hours) {
     const startDateTime = new Date(startDate);
     const endDateTime = new Date(endDate);
@@ -76,7 +84,7 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
                     name: parsedData.data.customerName,
                     contact: parsedData.data.customerContact,
                     folderId: folder.folderId,
-                    joiningDate: new Date().toLocaleDateString("en-US"),
+                    joiningDate: formatDate(new Date()),
                 },
             });
             customerId = customer.id;
@@ -95,8 +103,8 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
         const booking = yield src_1.default.booking.create({
             data: {
                 id: newBookingId,
-                startDate: parsedData.data.startDate,
-                endDate: parsedData.data.endDate,
+                startDate: formatDate(parsedData.data.startDate),
+                endDate: formatDate(parsedData.data.endDate),
                 startTime: parsedData.data.startTime,
                 endTime: parsedData.data.endTime,
                 allDay: parsedData.data.allDay,
@@ -141,7 +149,7 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 car: true,
                 customer: true,
             },
-            orderBy: [{ startDate: "asc" }, { startTime: "asc" }],
+            orderBy: [{ id: "asc" }],
         });
         const formatedBookings = bookings.map((booking) => {
             return {
@@ -159,7 +167,8 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 customerContact: booking.customer.contact,
                 carColor: booking.car.colorOfBooking,
                 odometerReading: booking.car.odometerReading,
-                isAdmin: req.userId === booking.userId
+                cancelledBy: booking.cancelledBy,
+                isAdmin: req.userId === booking.userId || req.userId === 1
             };
         });
         res.json({
@@ -242,13 +251,14 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             folderId: booking.customer.folderId,
             bookingFolderId: booking.bookingFolderId,
             currOdometerReading: booking.car.odometerReading,
+            cancelledBy: booking.cancelledBy,
         };
         // Filter out null values dynamically
         const filteredBooking = Object.fromEntries(Object.entries(formatedBooking).filter(([_, value]) => value !== null));
         res.json({
             message: "Booking fetched successfully",
             booking: filteredBooking,
-            isAdmin: req.userId === booking.userId
+            isAdmin: req.userId === booking.userId || req.userId === 1
         });
         return;
     }
@@ -262,7 +272,6 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
     }
 }));
 exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("Request body:", req.body);
     const parsedData = types_1.MultipleBookingDeleteSchema.safeParse(req.body);
     if (!parsedData.success) {
         console.error("Validation error:", parsedData.error);
@@ -271,16 +280,24 @@ exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res
             .json({ message: "Wrong Input type", error: parsedData.error });
         return;
     }
-    const { bookingIds } = parsedData.data;
-    console.log("Parsed booking IDs:", bookingIds);
     try {
         for (const id of req.body.bookingIds) {
-            const booking = yield src_1.default.booking.findFirst({
-                where: {
-                    id: id,
-                    userId: req.userId,
-                },
-            });
+            let booking;
+            if (req.userId !== 1) {
+                booking = yield src_1.default.booking.findFirst({
+                    where: {
+                        id: id,
+                        userId: req.userId,
+                    },
+                });
+            }
+            else {
+                booking = yield src_1.default.booking.findFirst({
+                    where: {
+                        id: id,
+                    },
+                });
+            }
             if (!booking) {
                 res.status(400).json({ message: "Booking not found" });
                 return;
@@ -292,14 +309,77 @@ exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res
             });
             yield src_1.default.booking.delete({
                 where: {
-                    id: id,
-                    userId: req.userId,
+                    id: booking.id,
                 },
             });
             yield (0, folder_1.deleteFolder)(booking.bookingFolderId);
         }
         res.json({
             message: "Booking deleted successfully",
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.bookingRouter.put("/update-date", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const bookings = yield src_1.default.booking.findMany();
+        for (const booking of bookings) {
+            yield src_1.default.booking.update({
+                where: {
+                    id: booking.id,
+                },
+                data: {
+                    startDate: formatDate(booking.startDate),
+                    endDate: formatDate(booking.endDate),
+                }
+            });
+        }
+        res.json({
+            message: "Booking dates updated successfully",
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.bookingRouter.put("/:id/cancel", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId
+            },
+        });
+        if (!booking) {
+            res.status(400).json({ message: "Booking not found" });
+            return;
+        }
+        yield src_1.default.booking.update({
+            where: {
+                id: req.params.id,
+            },
+            data: {
+                status: "Cancelled",
+                cancelledBy: "host"
+            }
+        });
+        res.json({
+            message: "Booking cancelled successfully",
+            BookingId: req.params.id,
         });
         return;
     }
@@ -334,9 +414,9 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
         const updateData = {};
         const updateCustomerData = {};
         if (parsedData.data.startDate !== undefined)
-            updateData.startDate = parsedData.data.startDate;
+            updateData.startDate = formatDate(parsedData.data.startDate);
         if (parsedData.data.endDate !== undefined)
-            updateData.endDate = parsedData.data.endDate;
+            updateData.endDate = formatDate(parsedData.data.endDate);
         if (parsedData.data.startTime !== undefined)
             updateData.startTime = parsedData.data.startTime;
         if (parsedData.data.endTime !== undefined)
@@ -376,7 +456,6 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
                 data: Object.assign({}, updateCustomerData),
             });
         }
-        console.log(updateData);
         const updatedbooking = yield src_1.default.booking.update({
             data: Object.assign(Object.assign({}, updateData), { carId: updateData.carId }),
             where: {
@@ -391,7 +470,6 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
                 },
             },
         });
-        console.log(updatedbooking);
         const documents = updatedbooking.customer.documents.map((document) => {
             return {
                 id: document.id,
@@ -499,9 +577,9 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
         const updatedBooking = yield src_1.default.booking.update({
             data: {
                 carId: parsedData.data.selectedCar,
-                startDate: parsedData.data.startDate,
+                startDate: formatDate(parsedData.data.startDate),
                 startTime: parsedData.data.startTime,
-                endDate: parsedData.data.returnDate,
+                endDate: formatDate(parsedData.data.returnDate),
                 endTime: parsedData.data.returnTime,
                 securityDeposit: parsedData.data.securityDeposit,
                 odometerReading: parsedData.data.odometerReading,
@@ -576,10 +654,9 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
             return;
         }
         const cost = calculateCost(new Date(booking.startDate), new Date(booking.endDate), booking.startTime, booking.endTime, booking.dailyRentalPrice);
-        console.log("cost", cost);
         const updatedBooking = yield src_1.default.booking.update({
             data: {
-                endDate: parsedData.data.endDate,
+                endDate: formatDate(parsedData.data.endDate),
                 endTime: parsedData.data.endTime,
                 status: "Completed",
                 endodometerReading: parsedData.data.odometerReading,
@@ -589,7 +666,6 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
                 userId: req.userId,
             },
         });
-        console.log("booking updated");
         let increment = 0;
         if (updatedBooking.totalEarnings && updatedBooking.totalEarnings > 0) {
             increment = updatedBooking.totalEarnings;
@@ -623,22 +699,35 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
 }));
 exports.bookingRouter.delete("/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const booking = yield src_1.default.booking.findFirst({
-            where: {
-                id: req.params.id,
-                userId: req.userId,
-            },
-            include: {
-                carImages: true,
-            },
-        });
+        let booking;
+        if (req.userId !== 1) {
+            booking = yield src_1.default.booking.findFirst({
+                where: {
+                    id: req.params.id,
+                    userId: req.userId,
+                },
+                include: {
+                    carImages: true,
+                },
+            });
+        }
+        else {
+            booking = yield src_1.default.booking.findFirst({
+                where: {
+                    id: req.params.id,
+                },
+                include: {
+                    carImages: true,
+                },
+            });
+        }
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
             return;
         }
         yield src_1.default.carImages.deleteMany({
             where: {
-                bookingId: req.params.id,
+                bookingId: booking.id,
             },
         });
         if (booking.carImages.length > 0) {
@@ -646,7 +735,7 @@ exports.bookingRouter.delete("/:id", middleware_1.middleware, (req, res) => __aw
         }
         yield src_1.default.booking.delete({
             where: {
-                id: req.params.id,
+                id: booking.id,
                 userId: req.userId,
             },
         });
@@ -654,7 +743,6 @@ exports.bookingRouter.delete("/:id", middleware_1.middleware, (req, res) => __aw
             yield src_1.default.car.update({
                 where: {
                     id: booking.carId,
-                    userId: req.userId,
                 },
                 data: {
                     totalEarnings: {
@@ -755,7 +843,7 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
                         contact: data.customerContact,
                         address: data.customerAddress,
                         folderId: folder.folderId,
-                        joiningDate: new Date().toLocaleDateString("en-US"),
+                        joiningDate: formatDate(new Date()),
                     },
                 });
             }
@@ -773,8 +861,8 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
             let booking = yield src_1.default.booking.create({
                 data: {
                     id: newBookingId,
-                    startDate: data.startDate,
-                    endDate: data.endDate,
+                    startDate: formatDate(data.startDate),
+                    endDate: formatDate(data.endDate),
                     startTime: data.startTime,
                     endTime: data.endTime,
                     allDay: data.allDay,
@@ -794,8 +882,8 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
             });
             bookings.push({
                 id: newBookingId,
-                startDate: data.startDate,
-                endDate: data.endDate,
+                startDate: formatDate(data.startDate),
+                endDate: formatDate(data.endDate),
                 startTime: data.startTime,
                 endTime: data.endTime,
                 status: data.status,
@@ -809,7 +897,7 @@ exports.bookingRouter.post("/multiple", middleware_1.middleware, (req, res) => _
         return;
     }
     catch (err) {
-        console.log(err);
+        console.error(err);
         res.status(400).json({
             message: "Internal server error",
             error: err,

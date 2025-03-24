@@ -14,6 +14,13 @@ import client from "../../store/src";
 import { deleteFile, deleteMultipleFiles } from "./delete";
 
 dotenv.config();
+export function formatDate(date:string | Date) {
+  return new Date(date).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function calculateCost(
   startDate: Date,
@@ -85,7 +92,7 @@ bookingRouter.post("/", middleware, async (req, res) => {
           name: parsedData.data.customerName,
           contact: parsedData.data.customerContact,
           folderId: folder.folderId,
-          joiningDate: new Date().toLocaleDateString("en-US"),
+          joiningDate: formatDate(new Date()),
         },
       });
       customerId = customer.id;
@@ -110,8 +117,8 @@ bookingRouter.post("/", middleware, async (req, res) => {
     const booking = await client.booking.create({
       data: {
         id: newBookingId,
-        startDate: parsedData.data.startDate,
-        endDate: parsedData.data.endDate,
+        startDate: formatDate(parsedData.data.startDate),
+        endDate: formatDate(parsedData.data.endDate),
         startTime: parsedData.data.startTime,
         endTime: parsedData.data.endTime,
         allDay: parsedData.data.allDay,
@@ -157,7 +164,7 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         car: true,
         customer: true,
       },
-      orderBy: [{ startDate: "asc" }, { startTime: "asc" }],
+      orderBy: [{ id: "asc" }],
     });
     const formatedBookings = bookings.map((booking) => {
       return {
@@ -175,7 +182,8 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         customerContact: booking.customer.contact,
         carColor: booking.car.colorOfBooking,
         odometerReading: booking.car.odometerReading,
-        isAdmin: req.userId === booking.userId
+        cancelledBy: booking.cancelledBy,
+        isAdmin: req.userId === booking.userId || req.userId === 1
       };
     });
     res.json({
@@ -260,6 +268,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       folderId: booking.customer.folderId,
       bookingFolderId: booking.bookingFolderId,
       currOdometerReading: booking.car.odometerReading,
+      cancelledBy: booking.cancelledBy,
     };
 
     // Filter out null values dynamically
@@ -269,7 +278,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
     res.json({
       message: "Booking fetched successfully",
       booking: filteredBooking,
-      isAdmin: req.userId === booking.userId
+      isAdmin: req.userId === booking.userId || req.userId === 1
     });
     return;
   } catch (e) {
@@ -283,7 +292,6 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
 });
 
 bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
-  console.log("Request body:", req.body);
 
   const parsedData = MultipleBookingDeleteSchema.safeParse(req.body);
   if (!parsedData.success) {
@@ -294,17 +302,23 @@ bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
     return;
   }
 
-  const { bookingIds } = parsedData.data;
-  console.log("Parsed booking IDs:", bookingIds);
-
   try {
     for (const id of req.body.bookingIds) {
-      const booking = await client.booking.findFirst({
-        where: {
-          id: id,
-          userId: req.userId!,
-        },
-      });
+      let booking;
+      if(req.userId !== 1){
+        booking = await client.booking.findFirst({
+          where: {
+            id: id,
+            userId: req.userId!,
+          },
+        });
+      }else{
+        booking = await client.booking.findFirst({
+          where: {
+            id: id,
+          },
+        });
+      }
 
       if (!booking) {
         res.status(400).json({ message: "Booking not found" });
@@ -319,8 +333,7 @@ bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
 
       await client.booking.delete({
         where: {
-          id: id,
-          userId: req.userId!,
+          id: booking.id,
         },
       });
 
@@ -328,6 +341,70 @@ bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
     }
     res.json({
       message: "Booking deleted successfully",
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+bookingRouter.put("/update-date", async (req,res) => {
+  try{
+    const bookings = await client.booking.findMany();
+    for(const booking of bookings){
+      await client.booking.update({
+        where: {
+          id: booking.id,
+        },
+        data:{
+          startDate: formatDate(booking.startDate),
+          endDate: formatDate(booking.endDate),
+        }
+      })
+    }
+    res.json({
+      message: "Booking dates updated successfully",
+    })
+    return;
+  }catch(e){
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+})
+
+bookingRouter.put("/:id/cancel", middleware, async (req, res) => {
+  try {
+    const booking = await client.booking.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.userId!
+      },
+    });
+    if (!booking) {
+      res.status(400).json({ message: "Booking not found" });
+      return;
+    }
+    await client.booking.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        status: "Cancelled",
+        cancelledBy: "host"
+      }
+    })
+    res.json({
+      message: "Booking cancelled successfully",
+      BookingId: req.params.id,
     });
     return;
   } catch (e) {
@@ -365,9 +442,9 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
     const updateCustomerData: Record<string, any> = {};
 
     if (parsedData.data.startDate !== undefined)
-      updateData.startDate = parsedData.data.startDate;
+      updateData.startDate = formatDate(parsedData.data.startDate);
     if (parsedData.data.endDate !== undefined)
-      updateData.endDate = parsedData.data.endDate;
+      updateData.endDate = formatDate(parsedData.data.endDate);
     if (parsedData.data.startTime !== undefined)
       updateData.startTime = parsedData.data.startTime;
     if (parsedData.data.endTime !== undefined)
@@ -412,7 +489,6 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       });
     }
 
-    console.log(updateData);
     const updatedbooking = await client.booking.update({
       data: {
         ...updateData,
@@ -430,7 +506,6 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
         },
       },
     });
-    console.log(updatedbooking);
 
     const documents = updatedbooking.customer.documents.map((document) => {
       return {
@@ -544,9 +619,9 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
     const updatedBooking = await client.booking.update({
       data: {
         carId: parsedData.data.selectedCar,
-        startDate: parsedData.data.startDate,
+        startDate: formatDate(parsedData.data.startDate),
         startTime: parsedData.data.startTime,
-        endDate: parsedData.data.returnDate,
+        endDate: formatDate(parsedData.data.returnDate),
         endTime: parsedData.data.returnTime,
         securityDeposit: parsedData.data.securityDeposit,
         odometerReading: parsedData.data.odometerReading,
@@ -630,11 +705,10 @@ bookingRouter.put("/:id/end", middleware, async (req, res) => {
       booking.endTime,
       booking.dailyRentalPrice,
     );
-    console.log("cost", cost);
 
     const updatedBooking = await client.booking.update({
       data: {
-        endDate: parsedData.data.endDate,
+        endDate: formatDate(parsedData.data.endDate),
         endTime: parsedData.data.endTime,
         status: "Completed",
         endodometerReading: parsedData.data.odometerReading,
@@ -645,7 +719,6 @@ bookingRouter.put("/:id/end", middleware, async (req, res) => {
       },
     });
 
-    console.log("booking updated");
     let increment = 0;
 
     if (updatedBooking.totalEarnings && updatedBooking.totalEarnings > 0) {
@@ -682,15 +755,28 @@ bookingRouter.put("/:id/end", middleware, async (req, res) => {
 
 bookingRouter.delete("/:id", middleware, async (req, res) => {
   try {
-    const booking = await client.booking.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.userId!,
-      },
-      include: {
-        carImages: true,
-      },
-    });
+
+    let booking;
+    if(req.userId !== 1){
+      booking = await client.booking.findFirst({
+        where: {
+          id: req.params.id,
+          userId: req.userId!,
+        },
+        include: {
+          carImages: true,
+        },
+      });
+    }else{
+      booking = await client.booking.findFirst({
+        where: {
+          id: req.params.id,
+        },
+        include: {
+          carImages: true,
+        },
+      });
+    }
 
     if (!booking) {
       res.status(400).json({ message: "Booking not found" });
@@ -699,7 +785,7 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
 
     await client.carImages.deleteMany({
       where: {
-        bookingId: req.params.id,
+        bookingId: booking.id,
       },
     });
 
@@ -711,7 +797,7 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
 
     await client.booking.delete({
       where: {
-        id: req.params.id,
+        id: booking.id,
         userId: req.userId!,
       },
     });
@@ -720,7 +806,6 @@ bookingRouter.delete("/:id", middleware, async (req, res) => {
       await client.car.update({
         where: {
           id: booking.carId,
-          userId: req.userId!,
         },
         data: {
           totalEarnings: {
@@ -845,7 +930,7 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
             contact: data.customerContact,
             address: data.customerAddress,
             folderId: folder.folderId,
-            joiningDate: new Date().toLocaleDateString("en-US"),
+            joiningDate: formatDate(new Date()),
           },
         });
       }
@@ -869,8 +954,8 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
       let booking = await client.booking.create({
         data: {
           id: newBookingId,
-          startDate: data.startDate,
-          endDate: data.endDate,
+          startDate: formatDate(data.startDate),
+          endDate: formatDate(data.endDate),
           startTime: data.startTime,
           endTime: data.endTime,
           allDay: data.allDay,
@@ -890,8 +975,8 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
       });
       bookings.push({
         id: newBookingId,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: formatDate(data.startDate),
+        endDate: formatDate(data.endDate),
         startTime: data.startTime,
         endTime: data.endTime,
         status: data.status,
@@ -904,7 +989,7 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
     res.status(200).json({ message: "Booking created successfully", bookings });
     return;
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(400).json({
       message: "Internal server error",
       error: err,
@@ -981,4 +1066,6 @@ bookingRouter.delete("/selfie-url/:id", middleware, async (req, res) => {
     return;
   }
 });
+
+
 

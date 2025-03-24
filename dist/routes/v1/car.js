@@ -105,6 +105,7 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
         const cars = yield src_1.default.car.findMany({
             include: {
                 bookings: true,
+                photos: true
             },
         });
         let formatedCars = cars.map((car) => {
@@ -125,6 +126,7 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
                 seats: car.seats,
                 ongoingBooking: ongoingBooking.length,
                 upcomingBooking: upcomingBooking.length,
+                photos: car.photos.map(photo => photo.url)
             };
         });
         formatedCars = formatedCars.sort((a, b) => {
@@ -159,13 +161,14 @@ exports.carRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                     },
                 },
                 favoriteCars: true,
+                photos: true
             },
         });
         if (!car) {
             res.status(404).json({ message: "Car not found" });
             return;
         }
-        const formatedCars = Object.assign(Object.assign({}, car), { favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0, bookings: car.bookings.map((booking) => {
+        const formatedCars = Object.assign(Object.assign({}, car), { favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0, photos: car.photos.map(photo => photo.url), bookings: car.bookings.map((booking) => {
                 return {
                     id: booking.id,
                     start: booking.startDate,
@@ -505,6 +508,93 @@ exports.carRouter.get("/customer/all", middleware_1.middleware, (req, res) => __
         res.status(400).json({
             message: "Internal server error",
             error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.post('/upload/photos/:carId', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.CarPhotosSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res
+            .status(400)
+            .json({ message: "Wrong Input type", error: parsedData.error });
+        return;
+    }
+    try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(400).json({ message: "User not found" });
+            return;
+        }
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parseInt(req.params.carId),
+            },
+            include: {
+                photos: true
+            }
+        });
+        if (!car) {
+            res.status(404).json({ message: "Car not found" });
+            return;
+        }
+        if (car.userId !== req.userId && req.userId !== 1) {
+            res.status(403).json({ message: "You are not authorized to perform this operation" });
+            return;
+        }
+        const photos = car.photos.map(photo => photo.url);
+        yield src_1.default.photos.deleteMany({
+            where: {
+                carId: car.id,
+            },
+        });
+        if (photos.length > 0) {
+            yield (0, delete_1.deleteMultipleFiles)(photos);
+        }
+        for (const url of parsedData.data.urls) {
+            const newPhoto = yield src_1.default.photos.create({
+                data: {
+                    url: url,
+                    carId: car.id,
+                },
+            });
+        }
+        res.json({
+            message: "Photo uploaded successfully",
+        });
+        return;
+    }
+    catch (e) {
+        console.error("Erros:", e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.post('/fix-image', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const cars = yield src_1.default.car.findMany();
+        for (const car of cars) {
+            yield src_1.default.photos.create({
+                data: {
+                    url: car.imageUrl,
+                    carId: car.id
+                }
+            });
+        }
+        res.json({ message: "Photos fixed successfully" });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
         });
         return;
     }

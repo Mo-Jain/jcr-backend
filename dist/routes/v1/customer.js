@@ -23,38 +23,11 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = require("../../config");
 const booking_1 = require("./booking");
 exports.customerRouter = (0, express_1.Router)();
-function timeToMinutes(time) {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
-}
 function combiningDateTime(date, time) {
-    console.log("date", date);
-    console.log("time", time);
     const dateTime = new Date(date);
     const [hour, minute, second] = time.split(":").map(Number);
     return dateTime.setHours(hour, minute, 0, 0);
 }
-exports.customerRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const customers = yield src_1.default.customer.findMany({
-            include: {
-                documents: true,
-            },
-        });
-        res.json({
-            message: "Customer fetched successfully",
-            customers: customers,
-        });
-        return;
-    }
-    catch (e) {
-        res.status(400).json({
-            message: "Internal server error",
-            error: e,
-        });
-        return;
-    }
-}));
 exports.customerRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // check the user
     const parsedData = types_1.customerSignupSchema.safeParse(req.body);
@@ -86,7 +59,7 @@ exports.customerRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, v
                 contact: parsedData.data.contact,
                 password: parsedData.data.password,
                 folderId: folder.folderId,
-                joiningDate: new Date().toLocaleDateString("en-US"),
+                joiningDate: (0, booking_1.formatDate)(new Date()),
             },
         });
         const token = jsonwebtoken_1.default.sign({
@@ -140,7 +113,7 @@ exports.customerRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, v
         return;
     }
     catch (e) {
-        console.log(e);
+        console.error(e);
         res.status(400).json({
             message: "Internal server error",
             error: e,
@@ -173,7 +146,8 @@ exports.customerRouter.post("/", middleware_1.middleware, (req, res) => __awaite
                 contact: parsedData.data.contact,
                 address: parsedData.data.address,
                 folderId: parsedData.data.folderId,
-                joiningDate: parsedData.data.joiningDate,
+                joiningDate: (0, booking_1.formatDate)(parsedData.data.joiningDate),
+                kycStatus: parsedData.data.address && parsedData.data.documents ? "verified" : "pending"
             },
             include: {
                 documents: true,
@@ -256,8 +230,8 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
         const booking = yield src_1.default.booking.create({
             data: {
                 id: newBookingId,
-                startDate: parsedData.data.startDate,
-                endDate: parsedData.data.endDate,
+                startDate: (0, booking_1.formatDate)(parsedData.data.startDate),
+                endDate: (0, booking_1.formatDate)(parsedData.data.endDate),
                 startTime: parsedData.data.startTime,
                 endTime: parsedData.data.endTime,
                 allDay: parsedData.data.allDay,
@@ -286,6 +260,100 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
         return;
     }
 }));
+exports.customerRouter.post('/favorite-car/:carId', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parseInt(req.params.carId),
+            }
+        });
+        if (!car) {
+            res.status(400).json({ message: "Invalid car id" });
+            return;
+        }
+        yield src_1.default.favoriteCar.create({
+            data: {
+                userId: user.id,
+                carId: car.id
+            }
+        });
+        res.json({
+            message: "Favorite car added successfully",
+            carId: car.id,
+            carName: car.brand + " " + car.model
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
+        });
+        return;
+    }
+}));
+exports.customerRouter.post('/update-kyc', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const customers = yield src_1.default.customer.findMany({
+            include: {
+                documents: true
+            }
+        });
+        for (const customer of customers) {
+            if (customer.address !== null && customer.documents.length !== 0 && customer.email === null) {
+                yield src_1.default.customer.update({
+                    where: {
+                        id: customer.id
+                    },
+                    data: {
+                        kycStatus: "under review"
+                    }
+                });
+            }
+        }
+        res.json({
+            message: "KYC status updated successfully"
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
+        });
+        return;
+    }
+}));
+exports.customerRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const customers = yield src_1.default.customer.findMany({
+            include: {
+                documents: true,
+            },
+        });
+        res.json({
+            message: "Customer fetched successfully",
+            customers: customers,
+        });
+        return;
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
 exports.customerRouter.get("/me", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const customer = yield src_1.default.customer.findFirst({
@@ -305,12 +373,12 @@ exports.customerRouter.get("/me", middleware_1.middleware, (req, res) => __await
             id: customer.id,
             name: customer.name,
             imageUrl: customer.imageUrl,
-            customer
+            customer,
         });
         return;
     }
     catch (e) {
-        console.log(e);
+        console.error(e);
         res.status(400).json({
             message: "Internal server error",
             error: e,
@@ -333,6 +401,7 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
             include: {
                 bookings: true,
                 favoriteCars: true,
+                photos: true
             },
         });
         const formatedCars = cars.map((car) => {
@@ -344,7 +413,8 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
                 price: car.price,
                 seats: car.seats,
                 fuel: car.fuel,
-                favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0
+                favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
+                photos: car.photos.map(photo => photo.url)
             };
         });
         res.json({
@@ -354,6 +424,47 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
         return;
     }
     catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const bookings = yield src_1.default.booking.findMany({
+            where: {
+                customerId: req.userId,
+            },
+            include: {
+                car: true,
+            },
+            orderBy: [{ id: "asc" }],
+        });
+        const formatedBookings = bookings.map((booking) => {
+            return {
+                id: booking.id,
+                carId: booking.car.id,
+                carImageUrl: booking.car.imageUrl,
+                carName: booking.car.brand + " " + booking.car.model,
+                carPlateNumber: booking.car.plateNumber,
+                start: booking.startDate,
+                end: booking.endDate,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                status: booking.status,
+                price: booking.car.price,
+            };
+        });
+        res.json({
+            message: "Bookings fetched successfully",
+            bookings: formatedBookings,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
         res.status(400).json({
             message: "Internal server error",
             error: e,
@@ -422,76 +533,51 @@ exports.customerRouter.get("/filtered-cars", middleware_1.middleware, (req, res)
         res.json({ message: "Internal Server Error" });
     }
 }));
-exports.customerRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const parsedData = types_1.CustomerUpdateSchema.safeParse(req.body);
-    if (!parsedData.success) {
-        res
-            .status(400)
-            .json({ message: "Wrong Input type", error: parsedData.error });
-        return;
-    }
+exports.customerRouter.get('/favorite-cars', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const customer = yield src_1.default.customer.findFirst({
+        const user = yield src_1.default.customer.findFirst({
             where: {
-                id: parseInt(req.params.id),
+                id: req.userId,
             },
             include: {
-                documents: true,
+                favoriteCars: {
+                    include: {
+                        car: {
+                            include: {
+                                photos: true
+                            }
+                        },
+                    },
+                },
             },
         });
-        if (!customer) {
-            res.status(400).json({ message: "Customer not found" });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
-        if (parsedData.data.documents) {
-            for (const document of parsedData.data.documents) {
-                yield src_1.default.document.create({
-                    data: {
-                        name: document.name,
-                        url: document.url,
-                        type: document.type,
-                        customerId: customer.id,
-                        docType: document.docType || "others"
-                    },
-                });
-            }
-        }
-        const updatedCustomer = yield src_1.default.customer.update({
-            data: {
-                name: parsedData.data.name,
-                contact: parsedData.data.contact,
-                address: parsedData.data.address,
-                folderId: parsedData.data.folderId,
-                joiningDate: parsedData.data.joiningDate,
-            },
-            where: {
-                id: customer.id,
-            },
-            include: {
-                documents: true,
-            },
-        });
-        const documents = updatedCustomer.documents.map((document) => {
+        const favoriteCars = user.favoriteCars.map((car) => {
             return {
-                id: document.id,
-                name: document.name,
-                url: document.url,
-                type: document.type,
-                docType: document.docType
+                id: car.car.id,
+                favorite: true,
+                brand: car.car.brand,
+                model: car.car.model,
+                imageUrl: car.car.imageUrl,
+                price: car.car.price,
+                seats: car.car.seats,
+                fuel: car.car.fuel,
+                photos: car.car.photos.map(photo => photo.url)
             };
         });
         res.json({
-            message: "Customer updated successfully",
-            CustomerId: customer.id,
-            documents: documents,
+            message: "Favorite cars fetched successfully",
+            favoriteCars,
         });
         return;
     }
-    catch (e) {
-        console.error(e);
-        res.status(400).json({
-            message: "Internal server error",
-            error: e,
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
         });
         return;
     }
@@ -525,6 +611,228 @@ exports.customerRouter.put('/me', middleware_1.middleware, (req, res) => __await
             id: customer.id,
             name: customer.name,
             contact: customer.contact,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.put("/set-joining-date/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const bookings = yield src_1.default.booking.findMany({
+            include: {
+                customer: true,
+            },
+        });
+        const customers = [];
+        for (const booking of bookings) {
+            const customer = booking.customer;
+            const joiningDate = new Date(customer.joiningDate);
+            const startDate = new Date(booking.startDate);
+            if (joiningDate.getFullYear() === 2026) {
+                customers.push(customer);
+                yield src_1.default.customer.update({
+                    where: {
+                        id: customer.id,
+                    },
+                    data: {
+                        joiningDate: (0, booking_1.formatDate)(startDate),
+                    },
+                });
+            }
+        }
+        res.json({
+            message: "Customer Joining date updated successfully",
+            customers
+        });
+        return;
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.put('/kyc-approve-flag', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!customer) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        yield src_1.default.customer.update({
+            where: {
+                id: customer.id
+            },
+            data: {
+                approvedFlag: false
+            }
+        });
+        res.json({
+            message: "KYC flag verfied successfully"
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
+        });
+        return;
+    }
+}));
+exports.customerRouter.put("/verify-kyc/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            }
+        });
+        if (!customer) {
+            res.status(400).json({ message: "Invalid customer id" });
+            return;
+        }
+        yield src_1.default.customer.update({
+            where: {
+                id: customer.id
+            },
+            data: {
+                kycStatus: "verified",
+                approvedFlag: true
+            }
+        });
+        res.json({
+            message: "KYC status updated successfully"
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
+        });
+        return;
+    }
+}));
+exports.customerRouter.put('/booking-cancel/:id', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: req.params.id,
+            }
+        });
+        if (!booking) {
+            res.status(400).json({ message: "Booking not found" });
+            return;
+        }
+        yield src_1.default.booking.update({
+            where: {
+                id: req.params.id,
+            },
+            data: {
+                status: "Cancelled",
+                cancelledBy: "guest"
+            }
+        });
+        res.json({
+            message: "Booking cancelled successfully",
+            BookingId: req.params.id,
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
+        });
+        return;
+    }
+}));
+exports.customerRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.CustomerUpdateSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res
+            .status(400)
+            .json({ message: "Wrong Input type", error: parsedData.error });
+        return;
+    }
+    try {
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            },
+            include: {
+                documents: true,
+            },
+        });
+        if (!customer) {
+            res.status(400).json({ message: "Customer not found" });
+            return;
+        }
+        if (parsedData.data.deletedPhotos) {
+            for (const photo of parsedData.data.deletedPhotos) {
+                yield src_1.default.document.delete({
+                    where: {
+                        id: photo.id
+                    }
+                });
+            }
+            yield (0, delete_1.deleteMultipleFiles)(parsedData.data.deletedPhotos.map((document) => document.url));
+        }
+        const documents = [];
+        if (parsedData.data.documents) {
+            for (const document of parsedData.data.documents) {
+                const doc = yield src_1.default.document.create({
+                    data: {
+                        name: document.name,
+                        url: document.url,
+                        type: document.type,
+                        customerId: customer.id,
+                        docType: document.docType || "others"
+                    },
+                });
+                documents.push(doc);
+            }
+        }
+        yield src_1.default.customer.update({
+            data: {
+                name: parsedData.data.name,
+                contact: parsedData.data.contact,
+                address: parsedData.data.address,
+                folderId: parsedData.data.folderId,
+                email: parsedData.data.email,
+                joiningDate: parsedData.data.joiningDate && (0, booking_1.formatDate)(parsedData.data.joiningDate),
+                kycStatus: parsedData.data.kycStatus
+            },
+            where: {
+                id: customer.id,
+            }
+        });
+        res.json({
+            message: "Customer updated successfully",
+            CustomerId: customer.id,
+            documents
         });
         return;
     }
@@ -646,131 +954,6 @@ exports.customerRouter.delete("/document/:id", middleware_1.middleware, (req, re
         res.status(400).json({
             message: "Internal server error",
             error: e,
-        });
-        return;
-    }
-}));
-exports.customerRouter.put("/set-joining-date/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const bookings = yield src_1.default.booking.findMany({
-            include: {
-                customer: true,
-            },
-        });
-        const customers = [];
-        for (const booking of bookings) {
-            const customer = booking.customer;
-            const joiningDate = new Date(customer.joiningDate);
-            console.log("joiningDate.getFullYear()", joiningDate.getFullYear());
-            const startDate = new Date(booking.startDate);
-            console.log("startDate", startDate.toLocaleDateString("en-US"));
-            if (joiningDate.getFullYear() === 2026) {
-                customers.push(customer);
-                yield src_1.default.customer.update({
-                    where: {
-                        id: customer.id,
-                    },
-                    data: {
-                        joiningDate: startDate.toLocaleDateString("en-US"),
-                    },
-                });
-            }
-        }
-        res.json({
-            message: "Customer Joining date updated successfully",
-            customers
-        });
-        return;
-    }
-    catch (e) {
-        res.status(400).json({
-            message: "Internal server error",
-            error: e,
-        });
-        return;
-    }
-}));
-exports.customerRouter.get('/favorite-cars', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const user = yield src_1.default.customer.findFirst({
-            where: {
-                id: req.userId,
-            },
-            include: {
-                favoriteCars: {
-                    include: {
-                        car: true,
-                    },
-                },
-            },
-        });
-        if (!user) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-        const favoriteCars = user.favoriteCars.map((car) => {
-            return {
-                id: car.car.id,
-                favorite: true,
-                brand: car.car.brand,
-                model: car.car.model,
-                imageUrl: car.car.imageUrl,
-                price: car.car.price,
-                seats: car.car.seats,
-                fuel: car.car.fuel
-            };
-        });
-        res.json({
-            message: "Favorite cars fetched successfully",
-            favoriteCars,
-        });
-        return;
-    }
-    catch (err) {
-        console.error(err);
-        res.json({ message: "Internal server error",
-            error: err
-        });
-        return;
-    }
-}));
-exports.customerRouter.post('/favorite-car/:carId', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const user = yield src_1.default.customer.findFirst({
-            where: {
-                id: req.userId,
-            }
-        });
-        if (!user) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-        const car = yield src_1.default.car.findFirst({
-            where: {
-                id: parseInt(req.params.carId),
-            }
-        });
-        if (!car) {
-            res.status(400).json({ message: "Invalid car id" });
-            return;
-        }
-        yield src_1.default.favoriteCar.create({
-            data: {
-                userId: user.id,
-                carId: car.id
-            }
-        });
-        res.json({
-            message: "Favorite car added successfully",
-            carId: car.id,
-            carName: car.brand + " " + car.model
-        });
-        return;
-    }
-    catch (err) {
-        console.error(err);
-        res.json({ message: "Internal server error",
-            error: err
         });
         return;
     }

@@ -17,6 +17,7 @@ const express_1 = require("express");
 const types_1 = require("../../types");
 const middleware_1 = require("../../middleware");
 const src_1 = __importDefault(require("../../store/src"));
+const booking_1 = require("./booking");
 exports.calendarRouter = (0, express_1.Router)();
 exports.calendarRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -95,9 +96,9 @@ exports.calendarRouter.put("/:id", middleware_1.middleware, (req, res) => __awai
         }
         const updateData = {};
         if (parsedData.data.startDate !== undefined)
-            updateData.startDate = parsedData.data.startDate;
+            updateData.startDate = (0, booking_1.formatDate)(parsedData.data.startDate);
         if (parsedData.data.endDate !== undefined)
-            updateData.endDate = parsedData.data.endDate;
+            updateData.endDate = (0, booking_1.formatDate)(parsedData.data.endDate);
         if (parsedData.data.startTime !== undefined)
             updateData.startTime = parsedData.data.startTime;
         if (parsedData.data.endTime !== undefined)

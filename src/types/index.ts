@@ -50,6 +50,10 @@ export const CarsUpdateSchema = z.object({
   fuel: z.string().optional()
 });
 
+export const CarPhotosSchema = z.object({
+  urls: z.array(z.string().url()),
+});
+
 export const FilterCarsSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
@@ -179,9 +183,15 @@ export const CustomerUpdateSchema = z.object({
   name: z.string(),
   contact: z.string(),
   address: z.string(),
+  email: z.string().optional(),
   folderId: z.string().optional(),
   joiningDate: z.string().optional(),
   documents: z.array(DocumentSchema).optional(),
+  deletedPhotos: z.array(z.object({
+    id:z.number(),
+    url:z.string().url()
+  })).optional(),
+  kycStatus: z.string().optional()  
 });
 
 export const CustomerBookingSchema = z.object({

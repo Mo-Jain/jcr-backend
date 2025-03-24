@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { CarsSchema, CarsUpdateSchema } from "../../types";
+import { CarPhotosSchema, CarsSchema, CarsUpdateSchema } from "../../types";
 import { middleware } from "../../middleware";
 import { deleteFolder } from "./folder";
 import client from "../../store/src";
-import { deleteFile } from "./delete";
+import { deleteFile, deleteMultipleFiles } from "./delete";
 
 export const carRouter = Router();
 
@@ -116,6 +116,7 @@ carRouter.get("/all", middleware, async (req, res) => {
     const cars = await client.car.findMany({
       include: {
         bookings: true,
+        photos: true
       },
     });
 
@@ -138,6 +139,7 @@ carRouter.get("/all", middleware, async (req, res) => {
         seats: car.seats,
         ongoingBooking: ongoingBooking.length,
         upcomingBooking: upcomingBooking.length,
+        photos: car.photos.map(photo => photo.url)
       };
     });
 
@@ -174,6 +176,7 @@ carRouter.get("/:id", middleware, async (req, res) => {
           },
         },
         favoriteCars: true,
+        photos: true
       },
     });
     if (!car) {
@@ -184,6 +187,7 @@ carRouter.get("/:id", middleware, async (req, res) => {
     const formatedCars = {
       ...car,
       favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
+      photos: car.photos.map(photo => photo.url),
       bookings: car.bookings.map((booking) => {
         return {
           id: booking.id,
@@ -569,4 +573,104 @@ carRouter.get("/customer/all", middleware, async (req, res) => {
       return;
   }
 });
+
+carRouter.post('/upload/photos/:carId', middleware, async (req, res) => {
+  const parsedData = CarPhotosSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
+    return;
+  }
+  try {
+
+    const user = await client.user.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+
+    if (!user) {
+      res.status(400).json({ message: "User not found" });
+      return;
+    }
+    const car = await client.car.findFirst({
+      where: {
+        id: parseInt(req.params.carId),
+      },
+      include: {
+        photos:true
+      }
+    });
+
+    if (!car) {
+      res.status(404).json({ message: "Car not found" });
+      return;
+    }
+
+    if (car.userId !== req.userId && req.userId !== 1) {
+      res.status(403).json({ message: "You are not authorized to perform this operation" });
+      return
+    }
+
+    const photos = car.photos.map(photo => photo.url);
+
+    await client.photos.deleteMany({
+      where: {
+        carId: car.id,
+      },
+    });
+
+    if(photos.length > 0) {
+      await deleteMultipleFiles(photos);
+    }
+    
+    for(const url of parsedData.data.urls) {
+      const newPhoto = await client.photos.create({
+        data: {
+          url: url,
+          carId: car.id,
+        },
+      });
+    }
+
+    res.json({
+      message: "Photo uploaded successfully",
+    });
+    return;
+  } catch (e) {
+    console.error("Erros:", e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+carRouter.post('/fix-image',middleware,async (req,res) => {
+  try{
+    const cars = await client.car.findMany();
+    
+    for(const car of cars){
+      await client.photos.create({
+        data:{
+          url: car.imageUrl,
+          carId: car.id
+        }
+      })
+    }
+
+    res.json({ message:"Photos fixed successfully" })
+    return;
+  }catch(err){
+    console.error(err);
+    res.json({message:"Internal server error",
+      error:err
+    })
+    return;
+  }
+})
+
+
 
