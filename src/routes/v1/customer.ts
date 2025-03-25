@@ -532,7 +532,8 @@ customerRouter.get("/filtered-cars",middleware,async (req,res) => {
     const cars = await client.car.findMany({
       include: {
         bookings: true,
-        favoriteCars:true
+        favoriteCars:true,
+        photos:true
       }
     });
     const searchStart = combiningDateTime(parsedData.data.startDate, parsedData.data.startTime);
@@ -558,7 +559,8 @@ customerRouter.get("/filtered-cars",middleware,async (req,res) => {
         price: car.price,
         seats: car.seats,
         fuel: car.fuel,
-        favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0
+        favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
+        photos: car.photos.map(photo => photo.url),
       };
     });
 
