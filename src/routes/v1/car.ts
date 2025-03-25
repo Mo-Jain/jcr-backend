@@ -139,7 +139,7 @@ carRouter.get("/all", middleware, async (req, res) => {
         seats: car.seats,
         ongoingBooking: ongoingBooking.length,
         upcomingBooking: upcomingBooking.length,
-        photos: car.photos.map(photo => photo.url)
+        photos: car.photos.map(photo => photo.url),
       };
     });
 
@@ -341,7 +341,8 @@ carRouter.put("/:id", middleware, async (req, res) => {
         mileage: parsedData.data.mileage,
         imageUrl: parsedData.data.imageUrl,
         seats: parsedData.data.seats,
-        fuel: parsedData.data.fuel
+        fuel: parsedData.data.fuel,
+        gear: parsedData.data.gear
       },
       where: {
         id: parseInt(req.params.id),

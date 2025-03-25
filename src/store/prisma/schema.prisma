@@ -41,6 +41,7 @@ model Car {
   odometerReading         String?
   seats                   Int      @default(4) 
   fuel                    String   @default("petrol")
+  gear                    String   @default("manual")
   user                    User     @relation(fields: [userId], references: [id])
   bookings                Booking[]
   favoriteCars            FavoriteCar[]

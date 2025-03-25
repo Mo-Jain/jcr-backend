@@ -126,7 +126,7 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
                 seats: car.seats,
                 ongoingBooking: ongoingBooking.length,
                 upcomingBooking: upcomingBooking.length,
-                photos: car.photos.map(photo => photo.url)
+                photos: car.photos.map(photo => photo.url),
             };
         });
         formatedCars = formatedCars.sort((a, b) => {
@@ -307,7 +307,8 @@ exports.carRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                 mileage: parsedData.data.mileage,
                 imageUrl: parsedData.data.imageUrl,
                 seats: parsedData.data.seats,
-                fuel: parsedData.data.fuel
+                fuel: parsedData.data.fuel,
+                gear: parsedData.data.gear
             },
             where: {
                 id: parseInt(req.params.id),

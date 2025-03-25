@@ -452,6 +452,7 @@ customerRouter.get("/car/all", middleware, async (req, res) => {
         price: car.price,
         seats: car.seats,
         fuel: car.fuel,
+        gear: car.gear,
         favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
         photos: car.photos.map(photo => photo.url)
       };

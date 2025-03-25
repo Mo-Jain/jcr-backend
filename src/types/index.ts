@@ -47,7 +47,8 @@ export const CarsUpdateSchema = z.object({
   mileage: z.number().optional(),
   imageUrl: z.string().url().optional(),
   seats: z.number().optional(),
-  fuel: z.string().optional()
+  fuel: z.string().optional(),
+  gear: z.string().optional()
 });
 
 export const CarPhotosSchema = z.object({

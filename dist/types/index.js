@@ -46,7 +46,8 @@ exports.CarsUpdateSchema = zod_1.default.object({
     mileage: zod_1.default.number().optional(),
     imageUrl: zod_1.default.string().url().optional(),
     seats: zod_1.default.number().optional(),
-    fuel: zod_1.default.string().optional()
+    fuel: zod_1.default.string().optional(),
+    gear: zod_1.default.string().optional()
 });
 exports.CarPhotosSchema = zod_1.default.object({
     urls: zod_1.default.array(zod_1.default.string().url()),
