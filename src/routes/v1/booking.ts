@@ -164,7 +164,7 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         car: true,
         customer: true,
       },
-      orderBy: [{ id: "asc" }],
+      orderBy: [{ id: "desc" }],
     });
     const formatedBookings = bookings.map((booking) => {
       return {
