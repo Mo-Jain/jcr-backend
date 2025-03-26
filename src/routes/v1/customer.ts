@@ -561,6 +561,7 @@ customerRouter.get("/filtered-cars",middleware,async (req,res) => {
         fuel: car.fuel,
         favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
         photos: car.photos.map(photo => photo.url),
+        gear:car.gear
       };
     });
 
@@ -610,7 +611,8 @@ customerRouter.get('/favorite-cars',middleware, async (req, res)=>{
         price: car.car.price,
         seats: car.car.seats,
         fuel: car.car.fuel,
-        photos: car.car.photos.map(photo => photo.url)
+        photos: car.car.photos.map(photo => photo.url),
+        gear:car.car.gear
       };
     });
 

@@ -523,6 +523,7 @@ exports.customerRouter.get("/filtered-cars", middleware_1.middleware, (req, res)
                 fuel: car.fuel,
                 favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
                 photos: car.photos.map(photo => photo.url),
+                gear: car.gear
             };
         });
         res.json({
@@ -568,7 +569,8 @@ exports.customerRouter.get('/favorite-cars', middleware_1.middleware, (req, res)
                 price: car.car.price,
                 seats: car.car.seats,
                 fuel: car.car.fuel,
-                photos: car.car.photos.map(photo => photo.url)
+                photos: car.car.photos.map(photo => photo.url),
+                gear: car.car.gear
             };
         });
         res.json({
