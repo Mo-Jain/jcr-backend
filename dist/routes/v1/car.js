@@ -19,6 +19,7 @@ const middleware_1 = require("../../middleware");
 const folder_1 = require("./folder");
 const src_1 = __importDefault(require("../../store/src"));
 const delete_1 = require("./delete");
+const customer_1 = require("./customer");
 exports.carRouter = (0, express_1.Router)();
 function calculateEarnings(bookings) {
     const now = new Date();
@@ -274,6 +275,51 @@ exports.carRouter.get("/thismonth/earnings/all", middleware_1.middleware, (req, 
         res.status(400).json({
             message: "Internal server error",
             error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.put("/availability/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.CarAvailabilitySchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res
+            .status(400)
+            .json({ message: "Wrong Input type", error: parsedData.error });
+        return;
+    }
+    try {
+        const user = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            },
+            include: {
+                bookings: true
+            }
+        });
+        if (!car) {
+            res.status(400).json({ message: "Invalid car id" });
+            return;
+        }
+        const isAvailable = (0, customer_1.isCarAvailable)(car, (0, customer_1.combiningDateTime)(parsedData.data.startDate, parsedData.data.startTime), (0, customer_1.combiningDateTime)(parsedData.data.endDate, parsedData.data.endTime));
+        res.json({
+            message: "Car availablity fetched successfully",
+            isAvailable
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
         });
         return;
     }

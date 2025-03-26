@@ -12,6 +12,7 @@ import { createFolder, deleteFolder } from "./folder";
 import dotenv from "dotenv";
 import client from "../../store/src";
 import { deleteFile, deleteMultipleFiles } from "./delete";
+import { combiningDateTime, isCarAvailable } from "./customer";
 
 dotenv.config();
 export function formatDate(date:string | Date) {
@@ -74,6 +75,26 @@ bookingRouter.post("/", middleware, async (req, res) => {
   }
   try {
     let customerId = parsedData.data.customerId;
+
+    const car = await client.car.findFirst({
+      where: {
+        id: parsedData.data.carId,
+      },
+      include: {
+        bookings: true
+      }
+    })
+
+    if(!car) {
+      res.status(400).json({message: "Invalid car id"})
+      return;
+    }
+    const isAvailable = isCarAvailable(car,combiningDateTime(parsedData.data.startDate, parsedData.data.startTime),combiningDateTime(parsedData.data.endDate, parsedData.data.endTime))
+
+    if(!isAvailable) {
+      res.status(400).json({message: "Car is not available"})
+      return;
+    }
 
     if (!customerId || customerId === 0) {
       const folder = await createFolder(

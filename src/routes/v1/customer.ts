@@ -17,10 +17,40 @@ interface Document {
 
 export const customerRouter = Router();
 
-function combiningDateTime(date: string, time: string) {
+export function combiningDateTime(date: string, time: string) {
   const dateTime = new Date(date);
   const [hour, minute,second] = time.split(":").map(Number);
   return dateTime.setHours(hour, minute, 0, 0);
+}
+
+interface Booking {
+  id: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+}
+
+interface Car {
+  id: number;
+  bookings: Booking[];
+}
+
+export function isCarAvailable(car:Car,searchStart:number,searchEnd:number){
+  const newSearchStart = new Date(searchStart);
+  const newSearchEnd = new Date(searchEnd);
+  const bookings = car.bookings.filter((booking:Booking) => {
+    if(booking.status.toLowerCase() === "completed" || booking.status.toLowerCase() === "cancelled") return false;
+    const bookingStart = new Date(combiningDateTime(booking.startDate, booking.startTime));
+    const bookingEnd = new Date(combiningDateTime(booking.endDate, booking.endTime));
+    if(newSearchStart >= bookingStart && newSearchStart <= bookingEnd) return true;
+    if(newSearchEnd >= bookingStart && newSearchEnd <= bookingEnd) return true;
+    if(bookingStart >= newSearchStart && bookingStart <= newSearchEnd) return true; 
+    if(bookingEnd >= newSearchStart && bookingEnd <= newSearchEnd) return true;
+    return false;
+  })
+  return bookings.length === 0
 }
 
 customerRouter.post("/signup", async (req, res) => {
@@ -226,6 +256,19 @@ customerRouter.post("/booking", middleware, async (req, res) => {
       res.status(401).json({message: "Unauthorized"})
       return;
     }
+    const car = await client.car.findFirst({
+      where: {
+        id: parsedData.data.carId,
+      },
+      include: {
+        bookings: true
+      }
+    })
+
+    if(!car) {
+      res.status(400).json({message: "Invalid car id"})
+      return;
+    }
 
     const newBookingId = await generateBookingId();
     const currDate = new Date();
@@ -243,16 +286,7 @@ customerRouter.post("/booking", middleware, async (req, res) => {
       return;
     }
 
-    const car = await client.car.findFirst({
-      where: {
-        id: parsedData.data.carId,
-      }
-    })
-
-    if(!car) {
-      res.status(400).json({message: "Invalid car id"})
-      return;
-    }
+    
 
     const booking = await client.booking.create({
       data: {
@@ -539,15 +573,7 @@ customerRouter.get("/filtered-cars",middleware,async (req,res) => {
     const searchStart = combiningDateTime(parsedData.data.startDate, parsedData.data.startTime);
     const searchEnd = combiningDateTime(parsedData.data.endDate, parsedData.data.endTime);
     const filteredCars = cars.filter(car => {
-          const bookings = car.bookings.filter(booking => {
-            if(booking.status.toLowerCase() === "completed") return false;
-            const bookingStart = combiningDateTime(booking.startDate, booking.startTime);
-            const bookingEnd = combiningDateTime(booking.endDate, booking.endTime);
-            if(searchStart >= bookingStart && searchStart <= bookingEnd) return true;
-            if(searchEnd >= bookingStart && searchEnd <= bookingEnd) return true;
-            return false;
-          })
-          return bookings.length === 0
+          return isCarAvailable(car,searchStart,searchEnd)
       });
 
     const formatedCars = filteredCars.map((car) => {

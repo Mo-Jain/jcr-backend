@@ -13,6 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.customerRouter = void 0;
+exports.combiningDateTime = combiningDateTime;
+exports.isCarAvailable = isCarAvailable;
 const express_1 = require("express");
 const src_1 = __importDefault(require("../../store/src"));
 const middleware_1 = require("../../middleware");
@@ -27,6 +29,26 @@ function combiningDateTime(date, time) {
     const dateTime = new Date(date);
     const [hour, minute, second] = time.split(":").map(Number);
     return dateTime.setHours(hour, minute, 0, 0);
+}
+function isCarAvailable(car, searchStart, searchEnd) {
+    const newSearchStart = new Date(searchStart);
+    const newSearchEnd = new Date(searchEnd);
+    const bookings = car.bookings.filter((booking) => {
+        if (booking.status.toLowerCase() === "completed" || booking.status.toLowerCase() === "cancelled")
+            return false;
+        const bookingStart = new Date(combiningDateTime(booking.startDate, booking.startTime));
+        const bookingEnd = new Date(combiningDateTime(booking.endDate, booking.endTime));
+        if (newSearchStart >= bookingStart && newSearchStart <= bookingEnd)
+            return true;
+        if (newSearchEnd >= bookingStart && newSearchEnd <= bookingEnd)
+            return true;
+        if (bookingStart >= newSearchStart && bookingStart <= newSearchEnd)
+            return true;
+        if (bookingEnd >= newSearchStart && bookingEnd <= newSearchEnd)
+            return true;
+        return false;
+    });
+    return bookings.length === 0;
 }
 exports.customerRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // check the user
@@ -207,6 +229,18 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
             res.status(401).json({ message: "Unauthorized" });
             return;
         }
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parsedData.data.carId,
+            },
+            include: {
+                bookings: true
+            }
+        });
+        if (!car) {
+            res.status(400).json({ message: "Invalid car id" });
+            return;
+        }
         const newBookingId = yield (0, booking_1.generateBookingId)();
         const currDate = new Date();
         const unixTimeStamp = Math.floor(currDate.getTime() / 1000);
@@ -216,15 +250,6 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
                 message: "Failed to create folder",
                 error: folder.error,
             });
-            return;
-        }
-        const car = yield src_1.default.car.findFirst({
-            where: {
-                id: parsedData.data.carId,
-            }
-        });
-        if (!car) {
-            res.status(400).json({ message: "Invalid car id" });
             return;
         }
         const booking = yield src_1.default.booking.create({
@@ -499,18 +524,7 @@ exports.customerRouter.get("/filtered-cars", middleware_1.middleware, (req, res)
         const searchStart = combiningDateTime(parsedData.data.startDate, parsedData.data.startTime);
         const searchEnd = combiningDateTime(parsedData.data.endDate, parsedData.data.endTime);
         const filteredCars = cars.filter(car => {
-            const bookings = car.bookings.filter(booking => {
-                if (booking.status.toLowerCase() === "completed")
-                    return false;
-                const bookingStart = combiningDateTime(booking.startDate, booking.startTime);
-                const bookingEnd = combiningDateTime(booking.endDate, booking.endTime);
-                if (searchStart >= bookingStart && searchStart <= bookingEnd)
-                    return true;
-                if (searchEnd >= bookingStart && searchEnd <= bookingEnd)
-                    return true;
-                return false;
-            });
-            return bookings.length === 0;
+            return isCarAvailable(car, searchStart, searchEnd);
         });
         const formatedCars = filteredCars.map((car) => {
             return {

@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { CarPhotosSchema, CarsSchema, CarsUpdateSchema } from "../../types";
+import { CarAvailabilitySchema, CarPhotosSchema, CarsSchema, CarsUpdateSchema } from "../../types";
 import { middleware } from "../../middleware";
 import { deleteFolder } from "./folder";
 import client from "../../store/src";
 import { deleteFile, deleteMultipleFiles } from "./delete";
+import { combiningDateTime, isCarAvailable } from "./customer";
 
 export const carRouter = Router();
 
@@ -308,6 +309,55 @@ carRouter.get("/thismonth/earnings/all", middleware, async (req, res) => {
   }
 });
 
+carRouter.put("/availability/:id",middleware, async (req,res) => {
+  const parsedData = CarAvailabilitySchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
+    return;
+  }
+  try{
+    const user = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      }
+    })
+    if(!user) {
+      res.status(401).json({message: "Unauthorized"})
+      return;
+    }
+
+    const car = await client.car.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+      },
+      include: {
+        bookings: true
+      }
+    })
+
+    if(!car) {
+      res.status(400).json({message: "Invalid car id"})
+      return;
+    }
+
+    const isAvailable = isCarAvailable(car,combiningDateTime(parsedData.data.startDate, parsedData.data.startTime),combiningDateTime(parsedData.data.endDate, parsedData.data.endTime))
+
+    res.json({
+      message: "Car availablity fetched successfully",
+      isAvailable
+    })
+    return;
+  }catch(err){
+    console.error(err);
+    res.json({message:"Internal server error",
+      error:err
+    })
+    return;
+  }
+})
+
 carRouter.put("/:id", middleware, async (req, res) => {
   const parsedData = CarsUpdateSchema.safeParse(req.body);
   if (!parsedData.success) {
@@ -366,6 +416,7 @@ carRouter.put("/:id", middleware, async (req, res) => {
     return;
   }
 });
+
 
 carRouter.delete("/:id", middleware, async (req, res) => {
   try {

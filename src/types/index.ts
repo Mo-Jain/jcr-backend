@@ -51,6 +51,13 @@ export const CarsUpdateSchema = z.object({
   gear: z.string().optional()
 });
 
+export const CarAvailabilitySchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string(),
+  endTime:z.string()
+})
+
 export const CarPhotosSchema = z.object({
   urls: z.array(z.string().url()),
 });

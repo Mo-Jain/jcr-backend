@@ -22,6 +22,7 @@ const folder_1 = require("./folder");
 const dotenv_1 = __importDefault(require("dotenv"));
 const src_1 = __importDefault(require("../../store/src"));
 const delete_1 = require("./delete");
+const customer_1 = require("./customer");
 dotenv_1.default.config();
 function formatDate(date) {
     return new Date(date).toLocaleString("en-US", {
@@ -70,6 +71,23 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
     }
     try {
         let customerId = parsedData.data.customerId;
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parsedData.data.carId,
+            },
+            include: {
+                bookings: true
+            }
+        });
+        if (!car) {
+            res.status(400).json({ message: "Invalid car id" });
+            return;
+        }
+        const isAvailable = (0, customer_1.isCarAvailable)(car, (0, customer_1.combiningDateTime)(parsedData.data.startDate, parsedData.data.startTime), (0, customer_1.combiningDateTime)(parsedData.data.endDate, parsedData.data.endTime));
+        if (!isAvailable) {
+            res.status(400).json({ message: "Car is not available" });
+            return;
+        }
         if (!customerId || customerId === 0) {
             const folder = yield (0, folder_1.createFolder)(parsedData.data.customerName + "_" + parsedData.data.customerContact, "customer");
             if (!folder.folderId || folder.error) {
