@@ -74,6 +74,7 @@ export const BookingSchema = z.object({
   dailyRentalPrice: z.number(),
   totalAmount: z.number(),
   customerId: z.number().optional(),
+  advance: z.number().optional(),
 });
 
 const DocumentSchema = z.object({

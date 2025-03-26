@@ -129,6 +129,7 @@ bookingRouter.post("/", middleware, async (req, res) => {
         status: "Upcoming",
         customerId: customerId,
         bookingFolderId: folder.folderId,
+        advancePayment: parsedData.data.advance,
       },
     });
 

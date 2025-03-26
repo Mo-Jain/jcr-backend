@@ -70,6 +70,7 @@ exports.BookingSchema = zod_1.default.object({
     dailyRentalPrice: zod_1.default.number(),
     totalAmount: zod_1.default.number(),
     customerId: zod_1.default.number().optional(),
+    advance: zod_1.default.number().optional(),
 });
 const DocumentSchema = zod_1.default.object({
     id: zod_1.default.number().optional(),
