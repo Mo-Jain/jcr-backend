@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { CarAvailabilitySchema, CarPhotosSchema, CarsSchema, CarsUpdateSchema } from "../../types";
+import {  CarPhotosSchema, CarsSchema, CarsUpdateSchema, FilterCarsSchema } from "../../types";
 import { middleware } from "../../middleware";
 import { deleteFolder } from "./folder";
 import client from "../../store/src";
@@ -309,8 +309,8 @@ carRouter.get("/thismonth/earnings/all", middleware, async (req, res) => {
   }
 });
 
-carRouter.put("/availability/:id",middleware, async (req,res) => {
-  const parsedData = CarAvailabilitySchema.safeParse(req.body);
+carRouter.get("/availability/:id",middleware, async (req,res) => {
+  const parsedData = FilterCarsSchema.safeParse(req.query);
   if (!parsedData.success) {
     res
       .status(400)
@@ -318,14 +318,27 @@ carRouter.put("/availability/:id",middleware, async (req,res) => {
     return;
   }
   try{
-    const user = await client.customer.findFirst({
-      where: {
-        id: req.userId,
+    if(parsedData.data.user==="customer") {
+      const user = await client.customer.findFirst({
+        where: {
+          id: req.userId,
+        }
+      })
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
       }
-    })
-    if(!user) {
-      res.status(401).json({message: "Unauthorized"})
-      return;
+    }
+    else {
+      const user = await client.user.findFirst({
+        where: {
+          id: req.userId,
+        }
+      })
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
+      }
     }
 
     const car = await client.car.findFirst({

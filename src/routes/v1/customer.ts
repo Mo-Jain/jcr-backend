@@ -554,15 +554,28 @@ customerRouter.get("/filtered-cars",middleware,async (req,res) => {
     return;
   }
   try{
-    const user = await client.customer.findFirst({
-      where: {
-        id: req.userId,
+    if(parsedData.data.user==="customer") {
+      const user = await client.customer.findFirst({
+        where: {
+          id: req.userId,
+        }
+      })
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
       }
-    })
-    if(!user) {
-      res.status(401).json({message: "Unauthorized"})
-      return;
+    }else {
+      const user = await client.user.findFirst({
+        where: {
+          id: req.userId,
+        }
+      })
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
+      }
     }
+    
     const cars = await client.car.findMany({
       include: {
         bookings: true,
@@ -585,9 +598,10 @@ customerRouter.get("/filtered-cars",middleware,async (req,res) => {
         price: car.price,
         seats: car.seats,
         fuel: car.fuel,
-        favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
+        favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
         photos: car.photos.map(photo => photo.url),
-        gear:car.gear
+        gear:car.gear,
+        plateNumber: parsedData.data.user==="admin" ? car.plateNumber : undefined
       };
     });
 

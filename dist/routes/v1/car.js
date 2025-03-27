@@ -279,8 +279,8 @@ exports.carRouter.get("/thismonth/earnings/all", middleware_1.middleware, (req, 
         return;
     }
 }));
-exports.carRouter.put("/availability/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const parsedData = types_1.CarAvailabilitySchema.safeParse(req.body);
+exports.carRouter.get("/availability/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.FilterCarsSchema.safeParse(req.query);
     if (!parsedData.success) {
         res
             .status(400)
@@ -288,14 +288,27 @@ exports.carRouter.put("/availability/:id", middleware_1.middleware, (req, res) =
         return;
     }
     try {
-        const user = yield src_1.default.customer.findFirst({
-            where: {
-                id: req.userId,
+        if (parsedData.data.user === "customer") {
+            const user = yield src_1.default.customer.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
             }
-        });
-        if (!user) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
+        }
+        else {
+            const user = yield src_1.default.user.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
         }
         const car = yield src_1.default.car.findFirst({
             where: {

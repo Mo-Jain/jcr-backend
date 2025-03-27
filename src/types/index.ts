@@ -51,12 +51,6 @@ export const CarsUpdateSchema = z.object({
   gear: z.string().optional()
 });
 
-export const CarAvailabilitySchema = z.object({
-  startDate: z.string(),
-  endDate: z.string(),
-  startTime: z.string(),
-  endTime:z.string()
-})
 
 export const CarPhotosSchema = z.object({
   urls: z.array(z.string().url()),
@@ -66,7 +60,8 @@ export const FilterCarsSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   startTime: z.string(),
-  endTime:z.string()
+  endTime:z.string(),
+  user: z.string()
 })
 
 export const BookingSchema = z.object({

@@ -505,14 +505,27 @@ exports.customerRouter.get("/filtered-cars", middleware_1.middleware, (req, res)
         return;
     }
     try {
-        const user = yield src_1.default.customer.findFirst({
-            where: {
-                id: req.userId,
+        if (parsedData.data.user === "customer") {
+            const user = yield src_1.default.customer.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
             }
-        });
-        if (!user) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
+        }
+        else {
+            const user = yield src_1.default.user.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
         }
         const cars = yield src_1.default.car.findMany({
             include: {
@@ -535,9 +548,10 @@ exports.customerRouter.get("/filtered-cars", middleware_1.middleware, (req, res)
                 price: car.price,
                 seats: car.seats,
                 fuel: car.fuel,
-                favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
+                favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
                 photos: car.photos.map(photo => photo.url),
-                gear: car.gear
+                gear: car.gear,
+                plateNumber: parsedData.data.user === "admin" ? car.plateNumber : undefined
             };
         });
         res.json({
