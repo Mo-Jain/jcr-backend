@@ -44,7 +44,6 @@ exports.CarsUpdateSchema = zod_1.default.object({
     color: zod_1.default.string().optional(),
     price: zod_1.default.number().optional(),
     mileage: zod_1.default.number().optional(),
-    imageUrl: zod_1.default.string().url().optional(),
     seats: zod_1.default.number().optional(),
     fuel: zod_1.default.string().optional(),
     gear: zod_1.default.string().optional()

@@ -175,7 +175,11 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
         }
         const bookings = yield src_1.default.booking.findMany({
             include: {
-                car: true,
+                car: {
+                    include: {
+                        photos: true
+                    }
+                },
                 customer: true,
             },
             orderBy: [{ id: "desc" }],
@@ -191,7 +195,7 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 carId: booking.car.id,
                 carName: booking.car.brand + " " + booking.car.model,
                 carPlateNumber: booking.car.plateNumber,
-                carImageUrl: booking.car.imageUrl,
+                carImageUrl: booking.car.photos[0].url,
                 customerName: booking.customer.name,
                 customerContact: booking.customer.contact,
                 carColor: booking.car.colorOfBooking,
@@ -239,7 +243,11 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
                 id: req.params.id,
             },
             include: {
-                car: true,
+                car: {
+                    include: {
+                        photos: true
+                    }
+                },
                 carImages: true,
                 customer: {
                     include: {
@@ -265,7 +273,7 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             carId: booking.car.id,
             carName: booking.car.brand + " " + booking.car.model,
             carPlateNumber: booking.car.plateNumber,
-            carImageUrl: booking.car.imageUrl,
+            carImageUrl: booking.car.photos[0].url,
             dailyRentalPrice: booking.dailyRentalPrice,
             securityDeposit: booking.securityDeposit,
             totalPrice: booking.totalEarnings,
@@ -344,6 +352,19 @@ exports.bookingRouter.put("/delete-multiple", middleware_1.middleware, (req, res
                     id: booking.id,
                 },
             });
+            if (booking.status.toLocaleLowerCase() !== "completed" && booking.totalEarnings) {
+                yield src_1.default.car.update({
+                    where: {
+                        id: booking.carId,
+                    },
+                    data: {
+                        totalEarnings: {
+                            decrement: booking.totalEarnings,
+                        },
+                    },
+                });
+            }
+            ;
             yield (0, folder_1.deleteFolder)(booking.bookingFolderId);
         }
         res.json({
@@ -599,7 +620,6 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                     id: req.params.id,
                 },
             });
-            console.log;
             if (booking && (!otp || otp !== booking.otp)) {
                 res.status(400).json({ message: "Invalid OTP" });
                 return;

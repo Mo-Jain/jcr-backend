@@ -45,7 +45,6 @@ export const CarsUpdateSchema = z.object({
   color: z.string().optional(),
   price: z.number().optional(),
   mileage: z.number().optional(),
-  imageUrl: z.string().url().optional(),
   seats: z.number().optional(),
   fuel: z.string().optional(),
   gear: z.string().optional()

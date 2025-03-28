@@ -195,7 +195,11 @@ bookingRouter.get("/all", middleware, async (req, res) => {
     }
     const bookings = await client.booking.findMany({
       include: {
-        car: true,
+        car: {
+          include: {
+            photos: true
+          }
+        },
         customer: true,
       },
       orderBy: [{ id: "desc" }],
@@ -211,7 +215,7 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         carId: booking.car.id,
         carName: booking.car.brand + " " + booking.car.model,
         carPlateNumber: booking.car.plateNumber,
-        carImageUrl: booking.car.imageUrl,
+        carImageUrl: booking.car.photos[0].url,
         customerName: booking.customer.name,
         customerContact: booking.customer.contact,
         carColor: booking.car.colorOfBooking,
@@ -259,7 +263,11 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
         id: req.params.id,
       },
       include: {
-        car: true,
+        car: {
+          include: {
+            photos: true
+          }
+        },
         carImages: true,
         customer: {
           include: {
@@ -287,7 +295,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       carId: booking.car.id,
       carName: booking.car.brand + " " + booking.car.model,
       carPlateNumber: booking.car.plateNumber,
-      carImageUrl: booking.car.imageUrl,
+      carImageUrl: booking.car.photos[0].url,
       dailyRentalPrice: booking.dailyRentalPrice,
       securityDeposit: booking.securityDeposit,
       totalPrice: booking.totalEarnings,
@@ -452,18 +460,7 @@ bookingRouter.put("/:id/cancel", middleware, async (req, res) => {
         cancelledBy: "host"
       }
     })
-    if(booking.totalEarnings) {
-      await client.car.update({
-        where: {
-          id: booking.carId,
-        },
-        data: {
-          totalEarnings: {
-            decrement: booking.totalEarnings,
-          },
-        },
-      });
-    };
+    
     res.json({
       message: "Booking cancelled successfully",
       BookingId: req.params.id,

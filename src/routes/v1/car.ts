@@ -187,6 +187,7 @@ carRouter.get("/:id", middleware, async (req, res) => {
       return;
     }
 
+    console.log("photos",car.photos)
     const formatedCars = {
       ...car,
       favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
@@ -388,7 +389,6 @@ carRouter.put("/:id", middleware, async (req, res) => {
       },
     });
 
-
     if (!car) {
       res.status(404).json({ message: "Car not found" });
       return;
@@ -404,7 +404,6 @@ carRouter.put("/:id", middleware, async (req, res) => {
         colorOfBooking: parsedData.data.color,
         price: parsedData.data.price,
         mileage: parsedData.data.mileage,
-        imageUrl: parsedData.data.imageUrl,
         seats: parsedData.data.seats,
         fuel: parsedData.data.fuel,
         gear: parsedData.data.gear
@@ -413,10 +412,6 @@ carRouter.put("/:id", middleware, async (req, res) => {
         id: parseInt(req.params.id),
       },
     });
-    if (parsedData.data.imageUrl && car.imageUrl) {
-      await deleteFile(car.imageUrl);
-    }
-
     res.json({
       message: "Car updated successfully",
       CarId: car.id,
@@ -439,11 +434,32 @@ carRouter.delete("/:id", middleware, async (req, res) => {
         id: parseInt(req.params.id),
         userId: req.userId!,
       },
+      include: {
+        photos: true,
+        favoriteCars: true,
+      },  
     });
 
     if (!car) {
       res.status(404).json({ message: "Car not found" });
       return;
+    }
+
+    for(const photo of car.photos) {
+      await client.photos.delete({
+        where: {
+          id: photo.id,
+        },
+      });
+      await deleteFile(photo.url);
+    }
+
+    for(const favoriteCar of car.favoriteCars) {
+      await client.favoriteCar.delete({
+        where: {
+          id: favoriteCar.id,
+        },
+      });
     }
 
     await client.car.delete({

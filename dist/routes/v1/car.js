@@ -28,8 +28,10 @@ function calculateEarnings(bookings) {
     oneMonthBefore.setMonth(now.getMonth() - 1);
     sixMonthsBefore.setMonth(now.getMonth() - 6);
     let [thisMonth, oneMonth, sixMonths] = [0, 0, 0];
-    for (const { startDate, totalEarnings } of bookings) {
+    for (const { startDate, totalEarnings, status } of bookings) {
         if (totalEarnings === null)
+            continue;
+        if (status.toLocaleLowerCase() === "cancelled")
             continue;
         const date = new Date(startDate);
         if (date >= sixMonthsBefore) {
@@ -169,6 +171,7 @@ exports.carRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(v
             res.status(404).json({ message: "Car not found" });
             return;
         }
+        console.log("photos", car.photos);
         const formatedCars = Object.assign(Object.assign({}, car), { favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0, photos: car.photos.map(photo => photo.url), bookings: car.bookings.map((booking) => {
                 return {
                     id: booking.id,
@@ -364,7 +367,6 @@ exports.carRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                 colorOfBooking: parsedData.data.color,
                 price: parsedData.data.price,
                 mileage: parsedData.data.mileage,
-                imageUrl: parsedData.data.imageUrl,
                 seats: parsedData.data.seats,
                 fuel: parsedData.data.fuel,
                 gear: parsedData.data.gear
@@ -373,9 +375,6 @@ exports.carRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(v
                 id: parseInt(req.params.id),
             },
         });
-        if (parsedData.data.imageUrl && car.imageUrl) {
-            yield (0, delete_1.deleteFile)(car.imageUrl);
-        }
         res.json({
             message: "Car updated successfully",
             CarId: car.id,
@@ -398,10 +397,29 @@ exports.carRouter.delete("/:id", middleware_1.middleware, (req, res) => __awaite
                 id: parseInt(req.params.id),
                 userId: req.userId,
             },
+            include: {
+                photos: true,
+                favoriteCars: true,
+            },
         });
         if (!car) {
             res.status(404).json({ message: "Car not found" });
             return;
+        }
+        for (const photo of car.photos) {
+            yield src_1.default.photos.delete({
+                where: {
+                    id: photo.id,
+                },
+            });
+            yield (0, delete_1.deleteFile)(photo.url);
+        }
+        for (const favoriteCar of car.favoriteCars) {
+            yield src_1.default.favoriteCar.delete({
+                where: {
+                    id: favoriteCar.id,
+                },
+            });
         }
         yield src_1.default.car.delete({
             where: {
