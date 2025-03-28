@@ -11,6 +11,7 @@ export const carRouter = Router();
 interface Booking {
   startDate: string;
   totalEarnings: number | null;
+  status: string;
 }
 
 interface CarData {
@@ -31,8 +32,9 @@ function calculateEarnings(bookings: Booking[]) {
 
   let [thisMonth, oneMonth, sixMonths] = [0, 0, 0];
 
-  for (const { startDate, totalEarnings } of bookings) {
+  for (const { startDate, totalEarnings,status } of bookings) {
     if (totalEarnings === null) continue;
+    if (status.toLocaleLowerCase() === "cancelled") continue;
 
     const date = new Date(startDate);
     if (date >= sixMonthsBefore) {
@@ -429,7 +431,6 @@ carRouter.put("/:id", middleware, async (req, res) => {
     return;
   }
 });
-
 
 carRouter.delete("/:id", middleware, async (req, res) => {
   try {
