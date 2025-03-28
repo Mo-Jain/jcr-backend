@@ -521,7 +521,7 @@ exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) =
                 startTime: booking.startTime,
                 endTime: booking.endTime,
                 status: booking.status,
-                price: booking.car.totalEarnings,
+                price: booking.totalEarnings,
             };
         });
         res.json({

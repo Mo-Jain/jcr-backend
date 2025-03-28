@@ -570,7 +570,7 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
           startTime: booking.startTime,
           endTime: booking.endTime,
           status: booking.status,
-          price: booking.car.totalEarnings,
+          price: booking.totalEarnings,
         };
       });
       res.json({

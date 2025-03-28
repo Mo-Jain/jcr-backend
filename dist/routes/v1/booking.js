@@ -599,6 +599,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                     id: req.params.id,
                 },
             });
+            console.log;
             if (booking && (!otp || otp !== booking.otp)) {
                 res.status(400).json({ message: "Invalid OTP" });
                 return;
