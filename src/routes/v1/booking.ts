@@ -624,6 +624,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
       .json({ message: "Wrong Input type", error: parsedData.error });
     return;
   }
+  const otp = req.query.otp;
   try {
     let booking;
     if(req.query.role === "customer"){
@@ -641,6 +642,10 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
           id: req.params.id,
         },
       });
+      if(booking  && (!otp || otp !== booking.otp)) {
+        res.status(400).json({message: "Invalid OTP"})
+        return;
+      }
     }
     else {
       booking = await client.booking.findFirst({
