@@ -374,6 +374,19 @@ bookingRouter.put("/delete-multiple", middleware, async (req, res) => {
         },
       });
 
+      if(booking.status.toLocaleLowerCase() !== "completed" && booking.totalEarnings) {
+        await client.car.update({
+          where: {
+            id: booking.carId,
+          },
+          data: {
+            totalEarnings: {
+              decrement: booking.totalEarnings,
+            },
+          },
+        });
+      };
+
       await deleteFolder(booking.bookingFolderId);
     }
     res.json({
@@ -439,6 +452,18 @@ bookingRouter.put("/:id/cancel", middleware, async (req, res) => {
         cancelledBy: "host"
       }
     })
+    if(booking.totalEarnings) {
+      await client.car.update({
+        where: {
+          id: booking.carId,
+        },
+        data: {
+          totalEarnings: {
+            decrement: booking.totalEarnings,
+          },
+        },
+      });
+    };
     res.json({
       message: "Booking cancelled successfully",
       BookingId: req.params.id,
