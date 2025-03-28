@@ -63,6 +63,7 @@ model Booking {
   dailyRentalPrice        Int
   car                     Car      @relation(fields: [carId], references: [id])
   user                    User     @relation(fields: [userId], references: [id])
+  otp                     String?     
   cancelledBy             CancelledBy?
   advancePayment          Int?
   totalEarnings           Int?

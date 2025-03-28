@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.bookingRouter = exports.generateBookingId = void 0;
 exports.formatDate = formatDate;
 exports.calculateCost = calculateCost;
+exports.generateOTP = generateOTP;
 const express_1 = require("express");
 const types_1 = require("../../types");
 const middleware_1 = require("../../middleware");
@@ -61,6 +62,15 @@ const generateBookingId = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.generateBookingId = generateBookingId;
 exports.bookingRouter = (0, express_1.Router)();
+function generateOTP() {
+    let digits = '0123456789';
+    let OTP = '';
+    let len = digits.length;
+    for (let i = 0; i < 4; i++) {
+        OTP += digits[Math.floor(Math.random() * len)];
+    }
+    return OTP;
+}
 exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.BookingSchema.safeParse(req.body);
     if (!parsedData.success) {
@@ -187,6 +197,7 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 carColor: booking.car.colorOfBooking,
                 odometerReading: booking.car.odometerReading,
                 cancelledBy: booking.cancelledBy,
+                otp: booking.otp,
                 isAdmin: req.userId === booking.userId || req.userId === 1
             };
         });
@@ -250,6 +261,7 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             status: booking.status,
             customerName: booking.customer.name,
             customerContact: booking.customer.contact,
+            customerMail: booking.customer.email,
             carId: booking.car.id,
             carName: booking.car.brand + " " + booking.car.model,
             carPlateNumber: booking.car.plateNumber,
@@ -271,6 +283,7 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             bookingFolderId: booking.bookingFolderId,
             currOdometerReading: booking.car.odometerReading,
             cancelledBy: booking.cancelledBy,
+            otp: booking.otp,
         };
         // Filter out null values dynamically
         const filteredBooking = Object.fromEntries(Object.entries(formatedBooking).filter(([_, value]) => value !== null));
@@ -569,12 +582,31 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
         return;
     }
     try {
-        const booking = yield src_1.default.booking.findFirst({
-            where: {
-                id: req.params.id,
-                userId: req.userId,
-            },
-        });
+        let booking;
+        if (req.query.role === "customer") {
+            const user = yield src_1.default.customer.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
+            booking = yield src_1.default.booking.findFirst({
+                where: {
+                    id: req.params.id,
+                },
+            });
+        }
+        else {
+            booking = yield src_1.default.booking.findFirst({
+                where: {
+                    id: req.params.id,
+                    userId: req.userId,
+                },
+            });
+        }
         if (!booking) {
             res.status(400).json({ message: "Booking not found" });
             return;
@@ -591,6 +623,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 name: parsedData.data.customerName,
                 contact: parsedData.data.customerContact,
                 address: parsedData.data.customerAddress,
+                email: parsedData.data.customerMail,
             },
         });
         const updatedBooking = yield src_1.default.booking.update({
@@ -609,6 +642,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 dailyRentalPrice: parsedData.data.dailyRentalPrice,
                 status: "Ongoing",
                 selfieUrl: parsedData.data.selfieUrl,
+                otp: ''
             },
             where: {
                 id: req.params.id,

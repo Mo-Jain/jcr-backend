@@ -65,6 +65,18 @@ export const generateBookingId = async () => {
 
 export const bookingRouter = Router();
 
+export function generateOTP() { 
+  
+  let digits = '0123456789'; 
+  let OTP = ''; 
+  let len = digits.length 
+  for (let i = 0; i < 4; i++) { 
+      OTP += digits[Math.floor(Math.random() * len)]; 
+  } 
+   
+  return OTP; 
+} 
+
 bookingRouter.post("/", middleware, async (req, res) => {
   const parsedData = BookingSchema.safeParse(req.body);
   if (!parsedData.success) {
@@ -205,6 +217,7 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         carColor: booking.car.colorOfBooking,
         odometerReading: booking.car.odometerReading,
         cancelledBy: booking.cancelledBy,
+        otp: booking.otp,
         isAdmin: req.userId === booking.userId || req.userId === 1
       };
     });
@@ -270,6 +283,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       status: booking.status,
       customerName: booking.customer.name,
       customerContact: booking.customer.contact,
+      customerMail: booking.customer.email,
       carId: booking.car.id,
       carName: booking.car.brand + " " + booking.car.model,
       carPlateNumber: booking.car.plateNumber,
@@ -291,6 +305,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       bookingFolderId: booking.bookingFolderId,
       currOdometerReading: booking.car.odometerReading,
       cancelledBy: booking.cancelledBy,
+      otp: booking.otp,
     };
 
     // Filter out null values dynamically
@@ -610,12 +625,32 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
     return;
   }
   try {
-    const booking = await client.booking.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.userId!,
-      },
-    });
+    let booking;
+    if(req.query.role === "customer"){
+      const user = await client.customer.findFirst({
+        where: {
+          id: req.userId,
+        }
+      });
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
+      }
+      booking = await client.booking.findFirst({
+        where: {
+          id: req.params.id,
+        },
+      });
+    }
+    else {
+      booking = await client.booking.findFirst({
+        where: {
+          id: req.params.id,
+          userId: req.userId!,
+        },
+      });
+    }
+    
 
     if (!booking) {
       res.status(400).json({ message: "Booking not found" });
@@ -635,6 +670,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         name: parsedData.data.customerName,
         contact: parsedData.data.customerContact,
         address: parsedData.data.customerAddress,
+        email: parsedData.data.customerMail,
       },
     });
 
@@ -654,6 +690,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         dailyRentalPrice: parsedData.data.dailyRentalPrice,
         status: "Ongoing",
         selfieUrl: parsedData.data.selfieUrl,
+        otp:''
       },
       where: {
         id: req.params.id,
@@ -1088,6 +1125,8 @@ bookingRouter.delete("/selfie-url/:id", middleware, async (req, res) => {
     return;
   }
 });
+
+
 
 
 

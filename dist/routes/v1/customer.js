@@ -168,6 +168,7 @@ exports.customerRouter.post("/", middleware_1.middleware, (req, res) => __awaite
                 contact: parsedData.data.contact,
                 address: parsedData.data.address,
                 folderId: parsedData.data.folderId,
+                email: parsedData.data.email,
                 joiningDate: (0, booking_1.formatDate)(parsedData.data.joiningDate),
                 kycStatus: parsedData.data.address && parsedData.data.documents ? "verified" : "pending"
             },
@@ -267,6 +268,7 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
                 status: "Upcoming",
                 customerId: user.id,
                 bookingFolderId: folder.folderId,
+                otp: (0, booking_1.generateOTP)()
             },
         });
         res.json({
@@ -411,6 +413,45 @@ exports.customerRouter.get("/me", middleware_1.middleware, (req, res) => __await
         return;
     }
 }));
+exports.customerRouter.get("/check-otp/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.query.otp) {
+            res.status(400).json({ message: "OTP is required" });
+            return;
+        }
+        const user = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: req.params.id,
+            },
+        });
+        if (!booking) {
+            res.status(400).json({ message: "Booking not found" });
+            return;
+        }
+        res.json({
+            message: "OTP checked successfully",
+            isCorrect: booking.otp === req.query.otp,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
 exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = yield src_1.default.customer.findFirst({
@@ -480,7 +521,7 @@ exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) =
                 startTime: booking.startTime,
                 endTime: booking.endTime,
                 status: booking.status,
-                price: booking.car.price,
+                price: booking.car.totalEarnings,
             };
         });
         res.json({
@@ -968,6 +1009,28 @@ exports.customerRouter.delete("/:id/documents/all", middleware_1.middleware, (re
 }));
 exports.customerRouter.delete("/document/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        if (req.query.role === "customer") {
+            const user = yield src_1.default.customer.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
+        }
+        else {
+            const user = yield src_1.default.user.findFirst({
+                where: {
+                    id: req.userId,
+                }
+            });
+            if (!user) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
+        }
         const document = yield src_1.default.document.delete({
             where: {
                 id: parseInt(req.params.id),

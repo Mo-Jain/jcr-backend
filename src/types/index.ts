@@ -153,6 +153,7 @@ export const BookingStartSchema = z.object({
   customerAddress: z.string(),
   customerName: z.string(),
   customerContact: z.string(),
+  customerMail: z.string().email(),
 });
 
 export const BookingEndSchema = z.object({
@@ -179,6 +180,7 @@ export const CustomerCreateSchema = z.object({
   contact: z.string(),
   address: z.string(),
   folderId: z.string(),
+  email: z.string(),
   joiningDate: z.string(),
   documents: z.array(DocumentSchema).optional(),
 });

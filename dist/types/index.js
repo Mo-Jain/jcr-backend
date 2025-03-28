@@ -142,6 +142,7 @@ exports.BookingStartSchema = zod_1.default.object({
     customerAddress: zod_1.default.string(),
     customerName: zod_1.default.string(),
     customerContact: zod_1.default.string(),
+    customerMail: zod_1.default.string().email(),
 });
 exports.BookingEndSchema = zod_1.default.object({
     endDate: zod_1.default.string(),
@@ -164,6 +165,7 @@ exports.CustomerCreateSchema = zod_1.default.object({
     contact: zod_1.default.string(),
     address: zod_1.default.string(),
     folderId: zod_1.default.string(),
+    email: zod_1.default.string(),
     joiningDate: zod_1.default.string(),
     documents: zod_1.default.array(DocumentSchema).optional(),
 });

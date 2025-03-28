@@ -6,7 +6,7 @@ import { createFolder, deleteFolder } from "./folder";
 import { deleteFile, deleteMultipleFiles } from "./delete";
 import jwt from "jsonwebtoken";
 import { JWT_PASSWORD } from "../../config";
-import { formatDate, generateBookingId } from "./booking";
+import { formatDate, generateBookingId, generateOTP } from "./booking";
 
 interface Document {
   id: number;
@@ -191,6 +191,7 @@ customerRouter.post("/", middleware, async (req, res) => {
         contact: parsedData.data.contact,
         address: parsedData.data.address,
         folderId: parsedData.data.folderId,
+        email: parsedData.data.email,
         joiningDate: formatDate(parsedData.data.joiningDate),
         kycStatus: parsedData.data.address && parsedData.data.documents ? "verified" : "pending"
       },
@@ -303,6 +304,7 @@ customerRouter.post("/booking", middleware, async (req, res) => {
         status: "Upcoming",
         customerId: user.id,
         bookingFolderId: folder.folderId,
+        otp: generateOTP()
       },
     });
 
@@ -456,6 +458,45 @@ customerRouter.get("/me", middleware, async (req, res) => {
   }
 });
 
+customerRouter.get("/check-otp/:id", middleware, async (req, res) => {
+  try {
+    if(!req.query.otp) {
+      res.status(400).json({message: "OTP is required"})
+      return;
+    }
+    const user = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      }
+    });
+    if(!user) {
+      res.status(401).json({message: "Unauthorized"})
+      return;
+    }
+    const booking = await client.booking.findFirst({
+      where: {
+        id: req.params.id,
+      },
+    });
+    if (!booking) {
+      res.status(400).json({ message: "Booking not found" });
+      return;
+    }
+    res.json({
+      message: "OTP checked successfully",
+      isCorrect: booking.otp === req.query.otp,
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
 customerRouter.get("/car/all", middleware, async (req, res) => {
   try {
     const user = await client.customer.findFirst({
@@ -529,7 +570,7 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
           startTime: booking.startTime,
           endTime: booking.endTime,
           status: booking.status,
-          price: booking.car.price,
+          price: booking.car.totalEarnings,
         };
       });
       res.json({
@@ -1051,6 +1092,27 @@ customerRouter.delete("/:id/documents/all", middleware, async (req, res) => {
 
 customerRouter.delete("/document/:id", middleware, async (req, res) => {
   try {
+    if(req.query.role === "customer"){
+      const user = await client.customer.findFirst({
+        where: {
+          id: req.userId,
+        }
+      });
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
+      }
+    }else {
+      const user = await client.user.findFirst({
+        where: {
+          id: req.userId,
+        }
+      });
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
+      }
+    }
     const document = await client.document.delete({
       where: {
         id: parseInt(req.params.id),
