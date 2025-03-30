@@ -107,7 +107,7 @@ model Photos {
 model Customer {
   id                      Int      @id @default(autoincrement()) @unique
   name                    String
-  contact                 String
+  contact                 String?
   imageUrl                String?
   folderId                String
   address                 String?
@@ -116,10 +116,11 @@ model Customer {
   email                   String?
   kycStatus               String   @default("pending")
   approvedFlag            Boolean  @default(false)
+  provider                String   @default("credentials")
   bookings                Booking[]
   documents               Document[]
   favoriteCars            FavoriteCar[]
-  @@unique([name, contact])
+  @@unique([name,contact,email])
 }
 
 model FavoriteCar {

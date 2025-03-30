@@ -7,6 +7,11 @@ import { deleteFile, deleteMultipleFiles } from "./delete";
 import jwt from "jsonwebtoken";
 import { JWT_PASSWORD } from "../../config";
 import { formatDate, generateBookingId, generateOTP } from "./booking";
+import dotenv from "dotenv";
+import {OAuth2Client} from 'google-auth-library';
+
+// Load environment variables
+dotenv.config();
 
 interface Document {
   id: number;
@@ -16,6 +21,13 @@ interface Document {
 }
 
 export const customerRouter = Router();
+
+const getUserInfo = async (access_token: string) => {
+  const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
+  const data = await response.json();
+  console.log("data",data);
+  return data;
+}
 
 export function combiningDateTime(date: string, time: string) {
   const dateTime = new Date(date);
@@ -83,7 +95,6 @@ customerRouter.post("/signup", async (req, res) => {
       return;
     }
 
-    
     customer = await client.customer.create({
       data: {
         name: parsedData.data.name,

@@ -987,7 +987,7 @@ bookingRouter.post("/multiple", middleware, async (req, res) => {
       carId: number;
       customerId: number;
       customerName: string;
-      customerContact: string;
+      customerContact: string | null;
     }[] = [];
 
     for (const data of dataSet) {

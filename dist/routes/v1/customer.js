@@ -24,7 +24,16 @@ const delete_1 = require("./delete");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = require("../../config");
 const booking_1 = require("./booking");
+const dotenv_1 = __importDefault(require("dotenv"));
+// Load environment variables
+dotenv_1.default.config();
 exports.customerRouter = (0, express_1.Router)();
+const getUserInfo = (access_token) => __awaiter(void 0, void 0, void 0, function* () {
+    const response = yield fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
+    const data = yield response.json();
+    console.log("data", data);
+    return data;
+});
 function combiningDateTime(date, time) {
     const dateTime = new Date(date);
     const [hour, minute, second] = time.split(":").map(Number);

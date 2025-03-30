@@ -11,6 +11,7 @@ import { bunnyRouter } from "./bunny";
 import client from "../../store/src";
 import { deleteFile } from "./delete";
 import dotenv from "dotenv";
+import { authRouter } from "./auth";
 
 // Load environment variables
 dotenv.config();
@@ -342,3 +343,4 @@ router.use("/booking", bookingRouter);
 router.use("/calendar", calendarRouter);
 router.use("/customer", customerRouter);
 router.use('/bunny', bunnyRouter);
+router.use('/oauth',authRouter);

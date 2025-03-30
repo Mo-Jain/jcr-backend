@@ -16,7 +16,7 @@ interface Booking {
   color: string;
   allDay: boolean;
   customerName: string;
-  customerContact: string;
+  customerContact: string | null;
   carId: number;
   carName: string;
   isAdmin: boolean;
