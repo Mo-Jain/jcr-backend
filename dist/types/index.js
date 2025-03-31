@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CustomerProfileSchema = exports.CustomerBookingSchema = exports.CustomerUpdateSchema = exports.CustomerCreateSchema = exports.CalendarUpdateSchema = exports.MultipleBookingDeleteSchema = exports.BookingEndSchema = exports.BookingStartSchema = exports.MultipleBookingSchema = exports.BookingUpdateSchema = exports.BookingSchema = exports.FilterCarsSchema = exports.CarPhotosSchema = exports.CarsUpdateSchema = exports.CarsSchema = exports.UpdateUserSchema = exports.customerSignupSchema = exports.SigninSchema = exports.SignupSchema = void 0;
+exports.CustomerProfileSchema = exports.CustomerBookingSchema = exports.CustomerUpdateSchema = exports.CustomerCreateSchema = exports.CalendarUpdateSchema = exports.MultipleBookingDeleteSchema = exports.BookingEndSchema = exports.BookingStartDocumentSchema = exports.BookingStartSchema = exports.MultipleBookingSchema = exports.BookingUpdateSchema = exports.BookingSchema = exports.FilterCarsSchema = exports.CarPhotosSchema = exports.CarsUpdateSchema = exports.CarsSchema = exports.UpdateUserSchema = exports.customerSignupSchema = exports.SigninSchema = exports.SignupSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
 const bufferSchema = zod_1.default.instanceof(Buffer);
 exports.SignupSchema = zod_1.default.object({
@@ -135,13 +135,15 @@ exports.BookingStartSchema = zod_1.default.object({
     startDate: zod_1.default.string(),
     startTime: zod_1.default.string(),
     totalAmount: zod_1.default.number(),
-    documents: zod_1.default.array(DocumentSchema).optional(),
-    selfieUrl: zod_1.default.string().url().optional(),
-    carImages: zod_1.default.array(DocumentSchema).optional(),
     customerAddress: zod_1.default.string(),
     customerName: zod_1.default.string(),
     customerContact: zod_1.default.string(),
     customerMail: zod_1.default.string().email(),
+});
+exports.BookingStartDocumentSchema = zod_1.default.object({
+    documents: zod_1.default.array(DocumentSchema).optional(),
+    selfieUrl: zod_1.default.string().url().optional(),
+    carImages: zod_1.default.array(DocumentSchema).optional(),
 });
 exports.BookingEndSchema = zod_1.default.object({
     endDate: zod_1.default.string(),

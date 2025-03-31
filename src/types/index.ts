@@ -146,14 +146,17 @@ export const BookingStartSchema = z.object({
   startDate: z.string(),
   startTime: z.string(),
   totalAmount: z.number(),
-  documents: z.array(DocumentSchema).optional(),
-  selfieUrl: z.string().url().optional(),
-  carImages: z.array(DocumentSchema).optional(),
   customerAddress: z.string(),
   customerName: z.string(),
   customerContact: z.string(),
   customerMail: z.string().email(),
 });
+
+export const BookingStartDocumentSchema = z.object({
+  documents: z.array(DocumentSchema).optional(),
+  selfieUrl: z.string().url().optional(),
+  carImages: z.array(DocumentSchema).optional(),
+})
 
 export const BookingEndSchema = z.object({
   endDate: z.string(),

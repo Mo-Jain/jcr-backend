@@ -91,7 +91,7 @@ exports.router.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, f
             userId: user.id,
             name: user.name,
         }, config_1.JWT_PASSWORD);
-        res.json({
+        res.status(200).json({
             message: "User signed in successfully",
             token,
             name: user.name,

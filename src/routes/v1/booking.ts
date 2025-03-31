@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   BookingEndSchema,
   BookingSchema,
+  BookingStartDocumentSchema,
   BookingStartSchema,
   BookingUpdateSchema,
   MultipleBookingDeleteSchema,
@@ -637,6 +638,100 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
   }
 });
 
+bookingRouter.put("/:id/start/document", middleware, async (req, res) => {
+  const parsedData = BookingStartDocumentSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    console.error("Validation error:", parsedData.error);
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
+    return;
+  }
+  const otp = req.query.otp;
+  try {
+    let booking;
+    if(req.query.role === "customer"){
+      const user = await client.customer.findFirst({
+        where: {
+          id: req.userId,
+        }
+      });
+      if(!user) {
+        res.status(401).json({message: "Unauthorized"})
+        return;
+      }
+      booking = await client.booking.findFirst({
+        where: {
+          id: req.params.id,
+        },
+      });
+      if(booking  && (!otp || otp !== booking.otp)) {
+        res.status(400).json({message: "Invalid OTP"})
+        return;
+      }
+    }
+    else {
+      booking = await client.booking.findFirst({
+        where: {
+          id: req.params.id,
+          userId: req.userId!,
+        },
+      });
+    }
+    
+    await client.booking.update({
+      data: {
+        selfieUrl: parsedData.data.selfieUrl,
+      },
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    if (!booking) {
+      res.status(400).json({ message: "Booking not found" });
+      return;
+    }
+   
+    if (parsedData.data.documents) {
+      for (const document of parsedData.data.documents) {
+        await client.document.create({
+          data: {
+            name: document.name,
+            url: document.url,
+            type: document.type,
+            customerId: booking.customerId,
+            docType: document.docType || "others"
+          },
+        });
+      }
+    }
+    if(parsedData.data.carImages){
+      for (const carImage of parsedData.data.carImages) {
+        await client.carImages.create({
+          data: {
+            name: carImage.name,
+            url: carImage.url,
+            bookingId: booking.id,
+          },
+        });
+      }
+    }
+
+    res.json({
+      message: "Booking started successfully",
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
 bookingRouter.put("/:id/start", middleware, async (req, res) => {
   const parsedData = BookingStartSchema.safeParse(req.body);
   if (!parsedData.success) {
@@ -677,8 +772,6 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         },
       });
     }
-    
-
     if (!booking) {
       res.status(400).json({ message: "Booking not found" });
       return;
@@ -716,37 +809,12 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         notes: parsedData.data.notes,
         dailyRentalPrice: parsedData.data.dailyRentalPrice,
         status: "Ongoing",
-        selfieUrl: parsedData.data.selfieUrl,
         otp:''
       },
       where: {
         id: req.params.id,
       },
     });
-    if (parsedData.data.documents) {
-      for (const document of parsedData.data.documents) {
-        await client.document.create({
-          data: {
-            name: document.name,
-            url: document.url,
-            type: document.type,
-            customerId: booking.customerId,
-            docType: document.docType || "others"
-          },
-        });
-      }
-    }
-    if(parsedData.data.carImages){
-      for (const carImage of parsedData.data.carImages) {
-        await client.carImages.create({
-          data: {
-            name: carImage.name,
-            url: carImage.url,
-            bookingId: booking.id,
-          },
-        });
-      }
-    }
 
     res.json({
       message: "Booking started successfully",
