@@ -91,6 +91,7 @@ exports.customerRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, v
                 password: parsedData.data.password,
                 folderId: folder.folderId,
                 joiningDate: (0, booking_1.formatDate)(new Date()),
+                email: parsedData.data.email
             },
         });
         const token = jsonwebtoken_1.default.sign({
@@ -102,6 +103,7 @@ exports.customerRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, v
             token,
             id: customer.id,
             name: customer.name,
+            customer
         });
         return;
     }
@@ -118,28 +120,131 @@ exports.customerRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, v
     const parsedData = types_1.SigninSchema.safeParse(req.body);
     if (!parsedData.success) {
         res.status(403).json({ message: "Wrong Input type" });
+        console.log("error", parsedData.error);
         return;
     }
     try {
-        const customer = yield src_1.default.customer.findFirst({
-            where: {
-                contact: parsedData.data.username,
-                password: parsedData.data.password,
-            },
-        });
-        if (!customer) {
-            res.status(403).json({ message: "Invalid username or password" });
-            return;
+        let customer;
+        if (parsedData.data.provider === "google") {
+            customer = yield src_1.default.customer.findFirst({
+                where: {
+                    email: parsedData.data.username,
+                },
+            });
+            if (!customer) {
+                const folder = yield (0, folder_1.createFolder)(parsedData.data.name + " " + parsedData.data.username.split("@")[0], "customer");
+                if (!folder.success || !folder.folderId) {
+                    res.status(400).json({ message: "Folder creation failed", error: folder.error });
+                    return;
+                }
+                customer = yield src_1.default.customer.create({
+                    data: {
+                        name: parsedData.data.name || "",
+                        email: parsedData.data.username,
+                        password: parsedData.data.password,
+                        imageUrl: parsedData.data.imageUrl,
+                        joiningDate: (0, booking_1.formatDate)(new Date()),
+                        provider: parsedData.data.provider,
+                        folderId: folder.folderId,
+                    },
+                });
+            }
+        }
+        else {
+            if (parsedData.data.username.includes("@")) {
+                customer = yield src_1.default.customer.findFirst({
+                    where: {
+                        email: parsedData.data.username,
+                    },
+                });
+            }
+            else {
+                customer = yield src_1.default.customer.findFirst({
+                    where: {
+                        contact: parsedData.data.username,
+                    },
+                });
+            }
+            if (!customer) {
+                res.status(403).json({ message: "Invalid username" });
+                return;
+            }
+            if (!customer.password || customer.password === "") {
+                yield src_1.default.customer.update({
+                    where: {
+                        id: customer.id
+                    },
+                    data: {
+                        password: parsedData.data.password
+                    }
+                });
+            }
+            else {
+                if (customer.password !== parsedData.data.password) {
+                    res.status(403).json({ message: "Invalid password" });
+                    return;
+                }
+            }
         }
         const token = jsonwebtoken_1.default.sign({
             userId: customer.id,
             name: customer.name,
         }, config_1.JWT_PASSWORD);
-        res.json({
+        res.status(200).json({
             message: "User signed in successfully",
             token,
             id: customer.id,
             name: customer.name,
+            image: customer.imageUrl,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.post("/checkMail", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const username = req.body.username;
+        if (!username || typeof username !== "string") {
+            res.status(400).json({ message: "Invalid username" });
+            return;
+        }
+        let customer;
+        if (username.includes("@")) {
+            customer = yield src_1.default.customer.findFirst({
+                where: {
+                    email: username,
+                },
+            });
+        }
+        else {
+            customer = yield src_1.default.customer.findFirst({
+                where: {
+                    contact: username,
+                },
+            });
+        }
+        if (!customer) {
+            res.status(403).json({ message: "Invalid username" });
+            return;
+        }
+        let isPassword;
+        if (customer.provider === "google") {
+            isPassword = customer.password && customer.password != "" ? true : false;
+        }
+        else {
+            isPassword = true;
+        }
+        res.status(200).json({
+            message: "Username is correct",
+            isPassword,
+            customer
         });
         return;
     }
@@ -247,7 +352,7 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
                 bookings: true
             }
         });
-        if (!car) {
+        if (!car || car.status === "pause") {
             res.status(400).json({ message: "Invalid car id" });
             return;
         }
@@ -274,9 +379,10 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
                 dailyRentalPrice: car.price,
                 totalEarnings: parsedData.data.totalAmount,
                 userId: car.userId,
-                status: "Upcoming",
+                status: "Requested",
                 customerId: user.id,
                 bookingFolderId: folder.folderId,
+                type: parsedData.data.type,
                 otp: (0, booking_1.generateOTP)()
             },
         });
@@ -292,6 +398,60 @@ exports.customerRouter.post("/booking", middleware_1.middleware, (req, res) => _
         res.status(400).json({
             message: "Internal server error",
             error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.post('/booking-payment/:bookingId', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { advancePayment, paymentMethod, status } = req.body;
+        const { bookingId } = req.params;
+        if (!bookingId) {
+            res.status(400).json({ message: "Booking id is required" });
+            return;
+        }
+        if (!advancePayment || !paymentMethod) {
+            res.status(400).json({ message: "Invalid input data" });
+            return;
+        }
+        const user = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: bookingId,
+                customerId: user.id
+            }
+        });
+        if (!booking) {
+            res.status(400).json({ message: "Invalid booking id" });
+            return;
+        }
+        yield src_1.default.booking.update({
+            where: {
+                id: bookingId,
+            },
+            data: {
+                paymentMethod: paymentMethod,
+                advancePayment: advancePayment,
+                status: status
+            }
+        });
+        res.json({
+            message: "Booking payment updated successfully",
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
         });
         return;
     }
@@ -404,12 +564,58 @@ exports.customerRouter.get("/me", middleware_1.middleware, (req, res) => __await
             res.status(404).json({ message: "Customer not found" });
             return;
         }
+        const formatedCustomer = {
+            id: customer.id,
+            name: customer.name,
+            contact: customer.contact || undefined,
+            address: customer.address || undefined,
+            email: customer.email || undefined,
+            folderId: customer.folderId,
+            documents: customer.documents.map(doc => ({
+                id: doc.id,
+                name: doc.name,
+                url: doc.url,
+                type: doc.type,
+                docType: doc.docType
+            }))
+        };
         res.json({
             message: "Customer fetched successfully",
             id: customer.id,
             name: customer.name,
             imageUrl: customer.imageUrl,
-            customer,
+            customer: formatedCustomer,
+            isPassword: customer.password && customer.password != "" ? true : false,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.get("/kyc-status", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            },
+            include: {
+                documents: true
+            }
+        });
+        if (!customer) {
+            res.status(404).json({ message: "Customer not found" });
+            return;
+        }
+        res.json({
+            message: "Customer fetched successfully",
+            kycStatus: customer.kycStatus,
+            approvedFlag: customer.approvedFlag,
         });
         return;
     }
@@ -478,6 +684,9 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
                 favoriteCars: true,
                 photos: true
             },
+            where: {
+                status: "active"
+            }
         });
         const formatedCars = cars.map((car) => {
             return {
@@ -500,6 +709,57 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
         return;
     }
     catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.customerRouter.get("/car/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!customer) {
+            res.status(404).json({ message: "unauthorized" });
+            return;
+        }
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+                status: "active"
+            },
+            include: {
+                favoriteCars: true,
+                photos: true
+            },
+        });
+        if (!car) {
+            res.status(404).json({ message: "Car not found" });
+            return;
+        }
+        const formatedCars = {
+            id: car.id,
+            brand: car.brand,
+            model: car.model,
+            price: car.price,
+            seats: car.seats,
+            fuel: car.fuel,
+            gear: car.gear,
+            favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
+            photos: car.photos.map(photo => photo.url),
+        };
+        res.json({
+            message: "Car fetched successfully",
+            car: formatedCars,
+        });
+        return;
+    }
+    catch (e) {
+        console.error("Erros:", e);
         res.status(400).json({
             message: "Internal server error",
             error: e,
@@ -531,6 +791,7 @@ exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) =
                 endTime: booking.endTime,
                 status: booking.status,
                 price: booking.totalEarnings,
+                type: booking.type,
             };
         });
         res.json({
@@ -627,7 +888,7 @@ exports.customerRouter.get('/favorite-cars', middleware_1.middleware, (req, res)
                         car: {
                             include: {
                                 photos: true
-                            }
+                            },
                         },
                     },
                 },
@@ -637,7 +898,9 @@ exports.customerRouter.get('/favorite-cars', middleware_1.middleware, (req, res)
             res.status(401).json({ message: "Unauthorized" });
             return;
         }
-        const favoriteCars = user.favoriteCars.map((car) => {
+        const favoriteCars = user.favoriteCars
+            .filter(car => car.car.status !== "pause")
+            .map((car) => {
             return {
                 id: car.car.id,
                 favorite: true,
@@ -694,6 +957,7 @@ exports.customerRouter.put('/me', middleware_1.middleware, (req, res) => __await
             id: customer.id,
             name: customer.name,
             contact: customer.contact,
+            customer: customer.imageUrl
         });
         return;
     }
@@ -841,6 +1105,49 @@ exports.customerRouter.put('/booking-cancel/:id', middleware_1.middleware, (req,
         res.json({
             message: "Booking cancelled successfully",
             BookingId: req.params.id,
+        });
+        return;
+    }
+    catch (err) {
+        console.error(err);
+        res.json({ message: "Internal server error",
+            error: err
+        });
+        return;
+    }
+}));
+exports.customerRouter.put('/me/update-password', middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.CustomerUpdatePasswordSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res
+            .status(400)
+            .json({ message: "Wrong Input type", error: parsedData.error });
+        return;
+    }
+    try {
+        const customer = yield src_1.default.customer.findFirst({
+            where: {
+                id: req.userId,
+            }
+        });
+        if (!customer) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        if (customer.password && (!parsedData.data.currPassword || customer.password !== parsedData.data.currPassword)) {
+            res.status(403).json({ message: "Invalid current password" });
+            return;
+        }
+        yield src_1.default.customer.update({
+            where: {
+                id: customer.id
+            },
+            data: {
+                password: parsedData.data.newPassword
+            }
+        });
+        res.json({
+            message: "Password updated successfully"
         });
         return;
     }

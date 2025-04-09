@@ -27,6 +27,7 @@ const src_1 = __importDefault(require("../../store/src"));
 const delete_1 = require("./delete");
 const dotenv_1 = __importDefault(require("dotenv"));
 const auth_1 = require("./auth");
+const razorpay_1 = require("./razorpay");
 // Load environment variables
 dotenv_1.default.config();
 exports.router = (0, express_1.Router)();
@@ -331,3 +332,4 @@ exports.router.use("/calendar", calendar_1.calendarRouter);
 exports.router.use("/customer", customer_1.customerRouter);
 exports.router.use('/bunny', bunny_1.bunnyRouter);
 exports.router.use('/oauth', auth_1.authRouter);
+exports.router.use('/razorpay', razorpay_1.razorpayRouter);

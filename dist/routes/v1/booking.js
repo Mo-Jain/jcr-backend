@@ -24,6 +24,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const src_1 = __importDefault(require("../../store/src"));
 const delete_1 = require("./delete");
 const customer_1 = require("./customer");
+const nodemailer_1 = __importDefault(require("nodemailer"));
 dotenv_1.default.config();
 function formatDate(date) {
     return new Date(date).toLocaleString("en-US", {
@@ -144,6 +145,7 @@ exports.bookingRouter.post("/", middleware_1.middleware, (req, res) => __awaiter
                 customerId: customerId,
                 bookingFolderId: folder.folderId,
                 advancePayment: parsedData.data.advance,
+                type: parsedData.data.type,
             },
         });
         res.json({
@@ -202,7 +204,57 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 odometerReading: booking.car.odometerReading,
                 cancelledBy: booking.cancelledBy,
                 otp: booking.otp,
+                type: booking.type,
                 isAdmin: req.userId === booking.userId || req.userId === 1
+            };
+        });
+        res.json({
+            message: "Bookings fetched successfully",
+            bookings: formatedBookings,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.bookingRouter.get("/requested", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield src_1.default.user.findFirst({
+            where: {
+                id: req.userId,
+            },
+        });
+        if (!user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+        const bookings = yield src_1.default.booking.findMany({
+            include: {
+                car: true,
+                customer: true,
+            },
+            where: {
+                status: "Requested",
+            }
+        });
+        const formatedBookings = bookings.map((booking) => {
+            return {
+                id: booking.id,
+                start: booking.startDate,
+                end: booking.endDate,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                status: booking.status,
+                carId: booking.car.id,
+                customerName: booking.customer.name,
+                customerContact: booking.customer.contact,
+                type: booking.type,
             };
         });
         res.json({
@@ -291,6 +343,7 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             bookingFolderId: booking.bookingFolderId,
             currOdometerReading: booking.car.odometerReading,
             cancelledBy: booking.cancelledBy,
+            type: booking.type,
             otp: booking.otp,
         };
         // Filter out null values dynamically
@@ -409,43 +462,7 @@ exports.bookingRouter.put("/update-date", (req, res) => __awaiter(void 0, void 0
         return;
     }
 }));
-exports.bookingRouter.put("/:id/cancel", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const booking = yield src_1.default.booking.findFirst({
-            where: {
-                id: req.params.id,
-                userId: req.userId
-            },
-        });
-        if (!booking) {
-            res.status(400).json({ message: "Booking not found" });
-            return;
-        }
-        yield src_1.default.booking.update({
-            where: {
-                id: req.params.id,
-            },
-            data: {
-                status: "Cancelled",
-                cancelledBy: "host"
-            }
-        });
-        res.json({
-            message: "Booking cancelled successfully",
-            BookingId: req.params.id,
-        });
-        return;
-    }
-    catch (e) {
-        console.error(e);
-        res.status(400).json({
-            message: "Internal server error",
-            error: e,
-        });
-        return;
-    }
-}));
-exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.bookingRouter.put("/:id/update", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.BookingUpdateSchema.safeParse(req.body);
     if (!parsedData.success) {
         res
@@ -457,10 +474,9 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
         const booking = yield src_1.default.booking.findFirst({
             where: {
                 id: req.params.id,
-                userId: req.userId,
             },
         });
-        if (!booking) {
+        if (!booking || ![booking.userId, 1].includes(req.userId)) {
             res.status(400).json({ message: "Booking not found" });
             return;
         }
@@ -494,6 +510,8 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
             updateData.endodometerReading = parsedData.data.endOdometerReading;
         if (parsedData.data.notes !== undefined)
             updateData.notes = parsedData.data.notes;
+        if (parsedData.data.type !== undefined)
+            updateData.type = parsedData.data.type;
         if (parsedData.data.selfieUrl !== undefined)
             updateData.selfieUrl = parsedData.data.selfieUrl;
         updateData.totalEarnings = parsedData.data.totalAmount;
@@ -581,6 +599,136 @@ exports.bookingRouter.put("/:id", middleware_1.middleware, (req, res) => __await
             documents: documents,
             carImages: carImages,
             selfieUrl: updatedbooking.selfieUrl,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.bookingRouter.put("/:id/cancel", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId
+            },
+        });
+        if (!booking) {
+            res.status(400).json({ message: "Booking not found" });
+            return;
+        }
+        yield src_1.default.booking.update({
+            where: {
+                id: req.params.id,
+            },
+            data: {
+                status: "Cancelled",
+                cancelledBy: "host"
+            }
+        });
+        res.json({
+            message: "Booking cancelled successfully",
+            BookingId: req.params.id,
+        });
+        return;
+    }
+    catch (e) {
+        console.error(e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.bookingRouter.put("/:id/consent", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const booking = yield src_1.default.booking.findFirst({
+            where: {
+                id: req.params.id,
+            },
+            include: {
+                customer: true,
+                car: true,
+            }
+        });
+        if (!booking || (booking.userId !== req.userId && req.userId !== 1)) {
+            res.status(400).json({ message: "Booking not found" });
+            return;
+        }
+        const action = req.body.action;
+        const transporter = nodemailer_1.default.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+        if (action === "confirm") {
+            yield src_1.default.booking.update({
+                where: {
+                    id: req.params.id,
+                },
+                data: {
+                    status: "Upcoming",
+                }
+            });
+            {
+                booking.customer.email &&
+                    (yield transporter.sendMail({
+                        from: process.env.EMAIL_USER,
+                        to: booking.customer.email,
+                        subject: "Booking Confirmation - Jain Car Rentals",
+                        text: `Dear ${booking.customer.name || "Customer"},\n\nThank you for choosing Jain Car Rentals.\n\nWe’re pleased to confirm your booking (ID: ${booking.id}) for the following vehicle:\n\nCar: ${booking.car.brand + " " + booking.car.model}\n\nCar Number: ${booking.car.plateNumber}\n\nBooking Period:\n\nFrom: ${formatDate(booking.startDate)} at ${booking.startTime}\n\nTo: ${formatDate(booking.endDate)} at ${booking.endTime}\n\n${booking.type === "pickup" ?
+                            "Please ensure you arrive on time for pickup and carry a valid ID."
+                            :
+                                "Car will be delivered to your address on the day of the booking. Please ensure you have valid ID"}\n\nIf you have any questions or need to make changes to your booking, feel free to contact us.\n\nWe look forward to serving you.\n\nBest regards,\n\nJain Car Rentals
+          `,
+                    }));
+            }
+            res.json({
+                message: "Booking approved successfully",
+                BookingId: req.params.id,
+            });
+            return;
+        }
+        else if (action === "reject") {
+            yield src_1.default.booking.update({
+                where: {
+                    id: req.params.id,
+                },
+                data: {
+                    status: "Cancelled",
+                    cancelledBy: "host"
+                }
+            });
+            console.log("into the step 3");
+            {
+                booking.customer.email &&
+                    (yield transporter.sendMail({
+                        from: process.env.EMAIL_USER,
+                        to: booking.customer.email,
+                        subject: "Booking Rejected - Jain Car Rentals",
+                        text: `Dear ${booking.customer.name || "Customer"},\n\nWe are sorry to inform you that your booking (ID: ${booking.id}) for the following vehicle was not accepted by car owner.\n\nIf you have any questions or need to make changes to your booking, feel free to contact us.\n\nWe look forward to serving you.\n\nBest regards,\n\nJain Car Rentals
+          `,
+                    }));
+            }
+            console.log("into the step 4");
+            res.json({
+                message: "Booking cancelled successfully",
+                BookingId: req.params.id,
+            });
+            return;
+        }
+        res.status(400).json({
+            message: "Wrong action string",
+            BookingId: req.params.id,
         });
         return;
     }
@@ -756,8 +904,6 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 paymentMethod: parsedData.data.paymentMethod,
                 notes: parsedData.data.notes,
                 dailyRentalPrice: parsedData.data.dailyRentalPrice,
-                status: "Ongoing",
-                otp: ''
             },
             where: {
                 id: req.params.id,
@@ -804,6 +950,7 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
                 endTime: parsedData.data.endTime,
                 status: "Completed",
                 endodometerReading: parsedData.data.odometerReading,
+                otp: ''
             },
             where: {
                 id: req.params.id,

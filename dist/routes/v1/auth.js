@@ -44,7 +44,11 @@ exports.authRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 
         res.json({ url: authorizeUrl });
     }
     catch (err) {
-        console.log("Error with signin in with google", err);
+        console.error("Error with signin in with google", err);
+        res.status(400).json({
+            message: "Internal server error",
+            error: err,
+        });
     }
 }));
 exports.authRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {

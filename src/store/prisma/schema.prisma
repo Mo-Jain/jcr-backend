@@ -42,6 +42,7 @@ model Car {
   seats                   Int      @default(4) 
   fuel                    String   @default("petrol")
   gear                    String   @default("manual")
+  status                  String   @default("active")
   user                    User     @relation(fields: [userId], references: [id])
   bookings                Booking[]
   favoriteCars            FavoriteCar[]
@@ -59,6 +60,7 @@ model Booking {
   status                  String
   carId                   Int
   userId                  Int
+  type                    String   @default("pickup")
   securityDeposit         String?
   dailyRentalPrice        Int
   car                     Car      @relation(fields: [carId], references: [id])
@@ -74,6 +76,7 @@ model Booking {
   selfieUrl               String?
   bookingFolderId         String
   carImages               CarImages[]
+  payments                Payment[]
   customerId              Int     
   customer                Customer @relation(fields: [customerId], references: [id])
 }
@@ -120,6 +123,7 @@ model Customer {
   bookings                Booking[]
   documents               Document[]
   favoriteCars            FavoriteCar[]
+  payments                Payment[]
   @@unique([name,contact,email])
 }
 
@@ -130,6 +134,18 @@ model FavoriteCar {
   car                     Car      @relation(fields: [carId], references: [id])
   user                    Customer @relation(fields: [userId], references: [id])
   @@unique([carId, userId])
+}
+
+model Payment {
+  id                      String      @id 
+  bookingId               String?
+  customerId              Int
+  amount                  Int
+  status                  String
+  method                  String
+  booking                 Booking?  @relation(fields: [bookingId], references: [id])
+  customer                Customer @relation(fields: [customerId], references: [id])
+  createdAt               DateTime @default(now())
 }
 
 enum CancelledBy {

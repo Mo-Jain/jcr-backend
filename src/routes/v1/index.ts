@@ -12,6 +12,7 @@ import client from "../../store/src";
 import { deleteFile } from "./delete";
 import dotenv from "dotenv";
 import { authRouter } from "./auth";
+import { razorpayRouter } from "./razorpay";
 
 // Load environment variables
 dotenv.config();
@@ -338,9 +339,11 @@ router.delete("/user/:id", middleware, async (req, res) => {
   });
 
 
+
 router.use("/car", carRouter);
 router.use("/booking", bookingRouter);
 router.use("/calendar", calendarRouter);
 router.use("/customer", customerRouter);
 router.use('/bunny', bunnyRouter);
 router.use('/oauth',authRouter);
+router.use('/razorpay',razorpayRouter);

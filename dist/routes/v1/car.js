@@ -130,6 +130,7 @@ exports.carRouter.get("/all", middleware_1.middleware, (req, res) => __awaiter(v
                 ongoingBooking: ongoingBooking.length,
                 upcomingBooking: upcomingBooking.length,
                 photos: car.photos.map(photo => photo.url),
+                status: car.status
             };
         });
         formatedCars = formatedCars.sort((a, b) => {
@@ -171,8 +172,7 @@ exports.carRouter.get("/:id", middleware_1.middleware, (req, res) => __awaiter(v
             res.status(404).json({ message: "Car not found" });
             return;
         }
-        console.log("photos", car.photos);
-        const formatedCars = Object.assign(Object.assign({}, car), { favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0, photos: car.photos.map(photo => photo.url), bookings: car.bookings.map((booking) => {
+        const formatedCars = Object.assign(Object.assign({}, car), { photos: car.photos.map(photo => photo.url), bookings: car.bookings.map((booking) => {
                 return {
                     id: booking.id,
                     start: booking.startDate,
@@ -316,6 +316,7 @@ exports.carRouter.get("/availability/:id", middleware_1.middleware, (req, res) =
         const car = yield src_1.default.car.findFirst({
             where: {
                 id: parseInt(req.params.id),
+                status: "active"
             },
             include: {
                 bookings: true
@@ -336,6 +337,86 @@ exports.carRouter.get("/availability/:id", middleware_1.middleware, (req, res) =
         console.error(err);
         res.json({ message: "Internal server error",
             error: err
+        });
+        return;
+    }
+}));
+exports.carRouter.get("/paused/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const cars = yield src_1.default.car.findMany({
+            include: {
+                photos: true
+            },
+            where: {
+                status: "pause"
+            }
+        });
+        const formatedCars = cars.map((car) => {
+            return {
+                id: car.id,
+                brand: car.brand,
+                model: car.model,
+                plateNumber: car.plateNumber,
+                colorOfBooking: car.colorOfBooking,
+                photos: car.photos.map(photo => photo.url),
+                status: car.status
+            };
+        });
+        res.json({
+            message: "Cars fetched successfully",
+            cars: formatedCars,
+        });
+        return;
+    }
+    catch (e) {
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
+        });
+        return;
+    }
+}));
+exports.carRouter.put("/:id/action", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const parsedData = types_1.CarsActionSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        res
+            .status(400)
+            .json({ message: "Wrong Input type", error: parsedData.error });
+        return;
+    }
+    try {
+        const car = yield src_1.default.car.findFirst({
+            where: {
+                id: parseInt(req.params.id),
+            },
+        });
+        if (!car) {
+            res.status(404).json({ message: "Car not found" });
+            return;
+        }
+        if (car.userId !== req.userId && req.userId !== 1) {
+            res.status(403).json({ message: "You are not authorized to perform this operation" });
+            return;
+        }
+        yield src_1.default.car.update({
+            data: {
+                status: parsedData.data.action
+            },
+            where: {
+                id: parseInt(req.params.id),
+            },
+        });
+        res.json({
+            message: "Car updated successfully",
+            CarId: car.id,
+        });
+        return;
+    }
+    catch (e) {
+        console.error("Erros:", e);
+        res.status(400).json({
+            message: "Internal server error",
+            error: e,
         });
         return;
     }

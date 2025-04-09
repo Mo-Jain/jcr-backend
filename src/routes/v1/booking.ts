@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 import client from "../../store/src";
 import { deleteFile, deleteMultipleFiles } from "./delete";
 import { combiningDateTime, isCarAvailable } from "./customer";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 export function formatDate(date:string | Date) {
@@ -164,6 +165,7 @@ bookingRouter.post("/", middleware, async (req, res) => {
         customerId: customerId,
         bookingFolderId: folder.folderId,
         advancePayment: parsedData.data.advance,
+        type: parsedData.data.type,
       },
     });
 
@@ -223,7 +225,58 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         odometerReading: booking.car.odometerReading,
         cancelledBy: booking.cancelledBy,
         otp: booking.otp,
+        type: booking.type,
         isAdmin: req.userId === booking.userId || req.userId === 1
+      };
+    });
+    res.json({
+      message: "Bookings fetched successfully",
+      bookings: formatedBookings,
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+bookingRouter.get("/requested", middleware, async (req, res) => {
+  try {
+    const user  = await client.user.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+    if (!user) {
+       res.status(401).json({ message: "Unauthorized" });
+       return;
+    }
+    const bookings = await client.booking.findMany({
+      include: {
+        car: true,
+        customer: true,
+      },
+      where: {
+        status: "Requested",
+      }
+    });
+
+    const formatedBookings = bookings.map((booking) => {
+      return {
+        id: booking.id,
+        start: booking.startDate,
+        end: booking.endDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        status: booking.status,
+        carId: booking.car.id,
+        customerName: booking.customer.name,
+        customerContact: booking.customer.contact,
+        type: booking.type,
       };
     });
     res.json({
@@ -314,6 +367,7 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       bookingFolderId: booking.bookingFolderId,
       currOdometerReading: booking.car.odometerReading,
       cancelledBy: booking.cancelledBy,
+      type: booking.type,
       otp: booking.otp,
     };
 
@@ -440,44 +494,7 @@ bookingRouter.put("/update-date", async (req,res) => {
   }
 })
 
-bookingRouter.put("/:id/cancel", middleware, async (req, res) => {
-  try {
-    const booking = await client.booking.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.userId!
-      },
-    });
-    if (!booking) {
-      res.status(400).json({ message: "Booking not found" });
-      return;
-    }
-    await client.booking.update({
-      where: {
-        id: req.params.id,
-      },
-      data: {
-        status: "Cancelled",
-        cancelledBy: "host"
-      }
-    })
-    
-    res.json({
-      message: "Booking cancelled successfully",
-      BookingId: req.params.id,
-    });
-    return;
-  } catch (e) {
-    console.error(e);
-    res.status(400).json({
-      message: "Internal server error",
-      error: e,
-    });
-    return;
-  }
-});
-
-bookingRouter.put("/:id", middleware, async (req, res) => {
+bookingRouter.put("/:id/update", middleware, async (req, res) => {
   const parsedData = BookingUpdateSchema.safeParse(req.body);
   if (!parsedData.success) {
     res
@@ -489,11 +506,10 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
     const booking = await client.booking.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
       },
     });
 
-    if (!booking) {
+    if (!booking || ![booking.userId, 1].includes(req.userId!)) {
       res.status(400).json({ message: "Booking not found" });
       return;
     }
@@ -529,6 +545,8 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       updateData.endodometerReading = parsedData.data.endOdometerReading;
     if (parsedData.data.notes !== undefined)
       updateData.notes = parsedData.data.notes;
+    if (parsedData.data.type !== undefined)
+      updateData.type = parsedData.data.type;
     if (parsedData.data.selfieUrl !== undefined)
       updateData.selfieUrl = parsedData.data.selfieUrl;
     updateData.totalEarnings = parsedData.data.totalAmount;
@@ -539,6 +557,7 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       updateCustomerData.address = parsedData.data.customerAddress;
     if (parsedData.data.customerContact !== undefined)
       updateCustomerData.contact = parsedData.data.customerContact;
+    
 
     if (updateCustomerData && booking.customerId) {
       await client.customer.update({
@@ -626,6 +645,140 @@ bookingRouter.put("/:id", middleware, async (req, res) => {
       documents: documents,
       carImages: carImages,
       selfieUrl: updatedbooking.selfieUrl,
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+bookingRouter.put("/:id/cancel", middleware, async (req, res) => {
+  try {
+    const booking = await client.booking.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.userId!
+      },
+    });
+    if (!booking) {
+      res.status(400).json({ message: "Booking not found" });
+      return;
+    }
+    await client.booking.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        status: "Cancelled",
+        cancelledBy: "host"
+      }
+    })
+    
+    res.json({
+      message: "Booking cancelled successfully",
+      BookingId: req.params.id,
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+bookingRouter.put("/:id/consent", middleware, async (req, res) => {
+  try {
+    const booking = await client.booking.findFirst({
+      where: {
+        id: req.params.id,
+      },  
+      include: {
+        customer: true,
+        car: true,
+      }
+    });
+    if (!booking || (booking.userId !== req.userId && req.userId !== 1)) {
+      res.status(400).json({ message: "Booking not found" });
+      return;
+    }
+
+
+    const action = req.body.action;
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+   
+    if(action === "confirm") {
+      await client.booking.update({
+        where: {
+          id: req.params.id,
+        },
+        data: {
+          status: "Upcoming",
+        }
+      })
+      {booking.customer.email &&
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: booking.customer.email,
+          subject: "Booking Confirmation - Jain Car Rentals",
+          text: `Dear ${booking.customer.name || "Customer"},\n\nThank you for choosing Jain Car Rentals.\n\nWe’re pleased to confirm your booking (ID: ${booking.id}) for the following vehicle:\n\nCar: ${booking.car.brand + " " + booking.car.model}\n\nCar Number: ${booking.car.plateNumber}\n\nBooking Period:\n\nFrom: ${formatDate(booking.startDate)} at ${booking.startTime}\n\nTo: ${formatDate(booking.endDate)} at ${booking.endTime}\n\n${booking.type === "pickup" ?
+          "Please ensure you arrive on time for pickup and carry a valid ID."
+          :
+          "Car will be delivered to your address on the day of the booking. Please ensure you have valid ID"
+          }\n\nIf you have any questions or need to make changes to your booking, feel free to contact us.\n\nWe look forward to serving you.\n\nBest regards,\n\nJain Car Rentals
+          `,
+          });
+      }
+      res.json({
+        message: "Booking approved successfully",
+        BookingId: req.params.id,
+      });
+      return;
+    }
+    else if (action === "reject") {
+      await client.booking.update({
+        where: {
+          id: req.params.id,
+        },
+        data: {
+          status: "Cancelled",
+          cancelledBy: "host"
+        }
+      })
+      
+      console.log("into the step 3")
+      {booking.customer.email &&
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: booking.customer.email,
+          subject: "Booking Rejected - Jain Car Rentals",
+          text: `Dear ${booking.customer.name || "Customer"},\n\nWe are sorry to inform you that your booking (ID: ${booking.id}) for the following vehicle was not accepted by car owner.\n\nIf you have any questions or need to make changes to your booking, feel free to contact us.\n\nWe look forward to serving you.\n\nBest regards,\n\nJain Car Rentals
+          `,
+          });
+      }
+      console.log("into the step 4")
+      res.json({
+        message: "Booking cancelled successfully",
+        BookingId: req.params.id,
+      });
+      return;
+    }
+    res.status(400).json({
+      message: "Wrong action string",
+      BookingId: req.params.id,
     });
     return;
   } catch (e) {
@@ -808,8 +961,6 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         paymentMethod: parsedData.data.paymentMethod,
         notes: parsedData.data.notes,
         dailyRentalPrice: parsedData.data.dailyRentalPrice,
-        status: "Ongoing",
-        otp:''
       },
       where: {
         id: req.params.id,
@@ -866,6 +1017,7 @@ bookingRouter.put("/:id/end", middleware, async (req, res) => {
         endTime: parsedData.data.endTime,
         status: "Completed",
         endodometerReading: parsedData.data.odometerReading,
+        otp: ''
       },
       where: {
         id: req.params.id,

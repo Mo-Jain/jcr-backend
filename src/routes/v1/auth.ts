@@ -40,7 +40,11 @@ authRouter.post("/signin",async (req,res) => {
     res.json({url: authorizeUrl})
     }
     catch(err){
-        console.log("Error with signin in with google",err);
+        console.error("Error with signin in with google",err);
+        res.status(400).json({
+            message: "Internal server error",
+            error: err,
+          });
     }
 })
 

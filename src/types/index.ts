@@ -11,13 +11,17 @@ export const SignupSchema = z.object({
 
 export const SigninSchema = z.object({
   username: z.string(),
-  password: z.string(),
+  password: z.string().optional(),
+  provider: z.string().optional(),
+  name:z.string().optional(),
+  imageUrl:z.string().url().optional()
 });
 
 export const customerSignupSchema = z.object({
   name: z.string(),
   contact: z.string(),
   password: z.string(),
+  email:z.string().email()
 });
 
 export const UpdateUserSchema = z.object({
@@ -50,6 +54,10 @@ export const CarsUpdateSchema = z.object({
   gear: z.string().optional()
 });
 
+export const CarsActionSchema = z.object({
+  action: z.enum(["active", "pause"]),
+});
+
 
 export const CarPhotosSchema = z.object({
   urls: z.array(z.string().url()),
@@ -74,6 +82,7 @@ export const BookingSchema = z.object({
   customerContact: z.string(),
   dailyRentalPrice: z.number(),
   totalAmount: z.number(),
+  type: z.string(),
   customerId: z.number().optional(),
   advance: z.number().optional(),
 });
@@ -109,6 +118,7 @@ export const BookingUpdateSchema = z.object({
   documents: z.array(DocumentSchema).optional(),
   selfieUrl: z.string().url().optional(),
   carImages: z.array(DocumentSchema).optional(),
+  type: z.string().optional(),
 });
 
 export const MultipleBookingSchema = z.array(
@@ -134,11 +144,11 @@ export const MultipleBookingSchema = z.array(
 );
 
 export const BookingStartSchema = z.object({
-  bookingAmountReceived: z.number(),
+  bookingAmountReceived: z.number().optional(),
   dailyRentalPrice: z.number(),
   notes: z.string().optional(),
   odometerReading: z.string(),
-  paymentMethod: z.string(),
+  paymentMethod: z.string().optional(),  
   returnDate: z.string(),
   returnTime: z.string(),
   securityDeposit: z.string(),
@@ -189,7 +199,7 @@ export const CustomerCreateSchema = z.object({
 
 export const CustomerUpdateSchema = z.object({
   name: z.string(),
-  contact: z.string(),
+  contact: z.string().optional(),
   address: z.string(),
   email: z.string().optional(),
   folderId: z.string().optional(),
@@ -202,6 +212,11 @@ export const CustomerUpdateSchema = z.object({
   kycStatus: z.string().optional()  
 });
 
+export const CustomerUpdatePasswordSchema = z.object({
+  currPassword: z.string().optional(),
+  newPassword: z.string()
+})
+
 export const CustomerBookingSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
@@ -210,13 +225,15 @@ export const CustomerBookingSchema = z.object({
   allDay: z.boolean(),
   carId: z.number(),
   totalAmount: z.number(),
+  type: z.string(),
 });
 
 export const CustomerProfileSchema = z.object({
   name: z.string().optional(),
   contact: z.string().optional(),
   password: z.string().optional(),
-  imageUrl: z.string().optional()
+  imageUrl: z.string().optional(),
+  address: z.string().optional(),
 })
 
 declare global {

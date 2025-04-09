@@ -1,7 +1,7 @@
 import { Router } from "express";
 import client from "../../store/src";
 import { middleware } from "../../middleware";
-import { CustomerBookingSchema, CustomerCreateSchema, CustomerProfileSchema, customerSignupSchema, CustomerUpdateSchema, FilterCarsSchema, SigninSchema } from "../../types";
+import { CustomerBookingSchema, CustomerCreateSchema, CustomerProfileSchema, customerSignupSchema, CustomerUpdatePasswordSchema, CustomerUpdateSchema, FilterCarsSchema, SigninSchema } from "../../types";
 import { createFolder, deleteFolder } from "./folder";
 import { deleteFile, deleteMultipleFiles } from "./delete";
 import jwt from "jsonwebtoken";
@@ -65,6 +65,9 @@ export function isCarAvailable(car:Car,searchStart:number,searchEnd:number){
   return bookings.length === 0
 }
 
+
+
+
 customerRouter.post("/signup", async (req, res) => {
   // check the user
   const parsedData = customerSignupSchema.safeParse(req.body);
@@ -102,6 +105,7 @@ customerRouter.post("/signup", async (req, res) => {
         password: parsedData.data.password,
         folderId: folder.folderId,
         joiningDate: formatDate(new Date()),
+        email: parsedData.data.email
       },
     });
     
@@ -118,6 +122,7 @@ customerRouter.post("/signup", async (req, res) => {
       token,
       id: customer.id,
       name: customer.name,
+      customer
     });
     return;
   } catch (e) {
@@ -134,20 +139,70 @@ customerRouter.post("/signin", async (req, res) => {
   const parsedData = SigninSchema.safeParse(req.body);
   if (!parsedData.success) {
     res.status(403).json({ message: "Wrong Input type" });
+    console.log("error",parsedData.error);
     return;
   }
 
   try {
-    const customer = await client.customer.findFirst({
-      where: {
-        contact: parsedData.data.username,
-        password: parsedData.data.password,
-      },
-    });
+    let customer;
+    if(parsedData.data.provider === "google"){
+      customer = await client.customer.findFirst({
+        where: {
+          email: parsedData.data.username,
+        },
+      });
+      if (!customer) {
+        const folder = await createFolder(parsedData.data.name+" "+parsedData.data.username.split("@")[0], "customer");
+        if(!folder.success || !folder.folderId) {
+          res.status(400).json({ message: "Folder creation failed", error: folder.error });
+          return;
+        }
+        customer = await client.customer.create({
+          data: {
+            name: parsedData.data.name || "",
+            email: parsedData.data.username,
+            password: parsedData.data.password,
+            imageUrl: parsedData.data.imageUrl,
+            joiningDate: formatDate(new Date()),
+            provider: parsedData.data.provider,
+            folderId: folder.folderId,
+          },
+        });
 
-    if (!customer) {
-      res.status(403).json({ message: "Invalid username or password" });
-      return;
+      }
+    }else {
+      if(parsedData.data.username.includes("@")){
+        customer = await client.customer.findFirst({
+          where: {
+            email: parsedData.data.username,
+          },
+        });
+      }else {
+        customer = await client.customer.findFirst({
+          where: {
+            contact: parsedData.data.username,
+          },
+        });
+      }
+      if (!customer) {
+        res.status(403).json({ message: "Invalid username" });
+        return;
+      }
+      if(!customer.password || customer.password === ""){
+        await client.customer.update({
+          where: {
+            id: customer.id
+          },
+          data:{
+            password: parsedData.data.password
+          }
+        })
+      }else {
+        if (customer.password !== parsedData.data.password) {
+          res.status(403).json({ message: "Invalid password" });
+          return;
+        }
+      }
     }
 
     const token = jwt.sign(
@@ -158,12 +213,64 @@ customerRouter.post("/signin", async (req, res) => {
       JWT_PASSWORD,
     );
 
-    res.json({
+    res.status(200).json({
       message: "User signed in successfully",
       token,
       id: customer.id,
       name: customer.name,
+      image:customer.imageUrl,
     });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+customerRouter.post("/checkMail", async (req, res) => {
+  try {
+    const username = req.body.username;
+    if(!username || typeof username !== "string") {
+      res.status(400).json({ message: "Invalid username" });
+      return;
+    }
+    let customer;
+    if(username.includes("@")){
+      customer = await client.customer.findFirst({
+        where: {
+          email: username,
+        },
+      });
+    }else {
+      customer = await client.customer.findFirst({
+        where: {
+          contact: username,
+        },
+      });
+    }
+
+    if (!customer) {
+      res.status(403).json({ message: "Invalid username" });
+      return;
+    }
+
+    let isPassword:boolean;
+    if(customer.provider === "google"){
+      isPassword = customer.password && customer.password != "" ? true : false;
+    }
+    else {
+      isPassword = true;
+    }
+
+    res.status(200).json({
+      message: "Username is correct",
+      isPassword,
+      customer
+    })
     return;
   } catch (e) {
     console.error(e);
@@ -259,6 +366,7 @@ customerRouter.post("/booking", middleware, async (req, res) => {
     return;
   }
   try {
+
     const user  = await client.customer.findFirst({
       where: {
         id: req.userId,
@@ -277,7 +385,7 @@ customerRouter.post("/booking", middleware, async (req, res) => {
       }
     })
 
-    if(!car) {
+    if(!car  || car.status === "pause") {
       res.status(400).json({message: "Invalid car id"})
       return;
     }
@@ -312,9 +420,10 @@ customerRouter.post("/booking", middleware, async (req, res) => {
         dailyRentalPrice: car.price,
         totalEarnings: parsedData.data.totalAmount,
         userId: car.userId,
-        status: "Upcoming",
+        status: "Requested",
         customerId: user.id,
         bookingFolderId: folder.folderId,
+        type: parsedData.data.type,
         otp: generateOTP()
       },
     });
@@ -334,6 +443,67 @@ customerRouter.post("/booking", middleware, async (req, res) => {
     return;
   }
 });
+
+customerRouter.post('/booking-payment/:bookingId',middleware,async (req,res) => {
+  try{
+    const {advancePayment,paymentMethod,status} = req.body;
+    const {bookingId} = req.params;
+
+    if(!bookingId) {
+      res.status(400).json({message: "Booking id is required"})
+      return;
+    }
+
+    if(!advancePayment || !paymentMethod) {
+      res.status(400).json({message: "Invalid input data"})
+      return;
+    }
+    const user  = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      }
+    })
+
+    if(!user) {
+      res.status(401).json({message: "Unauthorized"})
+      return;
+    }
+
+    const booking = await client.booking.findFirst({
+      where: {
+        id: bookingId,
+        customerId: user.id
+      }
+    })
+
+    if(!booking) {
+      res.status(400).json({message: "Invalid booking id"})
+      return;
+    }
+
+    await client.booking.update({
+      where: {
+        id: bookingId,
+      },
+      data:{
+        paymentMethod: paymentMethod,
+        advancePayment: advancePayment,
+        status: status
+      }
+    })
+
+    res.json({
+      message: "Booking payment updated successfully",
+    })
+    return;
+  }catch(err){
+    console.error(err);
+    res.json({message:"Internal server error",
+      error:err
+    })
+    return;
+  }
+})
 
 customerRouter.post('/favorite-car/:carId', middleware,async (req,res) => {
   try{
@@ -451,12 +621,60 @@ customerRouter.get("/me", middleware, async (req, res) => {
       res.status(404).json({ message: "Customer not found" });
       return;
     }
+
+    const formatedCustomer = {
+      id: customer.id,
+      name: customer.name,
+      contact: customer.contact || undefined,
+      address: customer.address || undefined,
+      email: customer.email || undefined,
+      folderId: customer.folderId,
+      documents: customer.documents.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        url: doc.url,
+        type: doc.type,
+        docType: doc.docType
+      }))
+    }
     res.json({
       message: "Customer fetched successfully",
       id: customer.id,
       name: customer.name,
       imageUrl: customer.imageUrl,
-      customer,
+      customer:formatedCustomer,
+      isPassword: customer.password && customer.password != "" ? true : false,
+    });
+    return;
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
+customerRouter.get("/kyc-status", middleware, async (req, res) => {
+  try {
+    const customer = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      },
+      include:{
+        documents:true
+      }
+    });
+
+    if (!customer) {
+      res.status(404).json({ message: "Customer not found" });
+      return;
+    }
+    res.json({
+      message: "Customer fetched successfully",
+      kycStatus: customer.kycStatus,
+      approvedFlag:customer.approvedFlag, 
     });
     return;
   } catch (e) {
@@ -526,6 +744,9 @@ customerRouter.get("/car/all", middleware, async (req, res) => {
         favoriteCars: true,
         photos:true
       },
+      where: {
+        status: "active"
+      }
     });
 
     
@@ -558,6 +779,61 @@ customerRouter.get("/car/all", middleware, async (req, res) => {
   }
 });
 
+customerRouter.get("/car/:id", middleware, async (req, res) => {
+  try {
+
+    const customer = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      }
+    });
+
+    if (!customer) {
+      res.status(404).json({ message: "unauthorized" });
+      return;
+    }
+
+    const car = await client.car.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        status: "active"
+      },
+      include: {
+        favoriteCars: true,
+        photos: true
+      },
+    });
+    if (!car) {
+      res.status(404).json({ message: "Car not found" });
+      return;
+    }
+
+    const formatedCars = {
+      id: car.id,
+      brand: car.brand,
+      model: car.model,
+      price: car.price,
+      seats: car.seats,
+      fuel: car.fuel,
+      gear: car.gear,
+      favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
+      photos: car.photos.map(photo => photo.url),
+    };
+    res.json({
+      message: "Car fetched successfully",
+      car: formatedCars,
+    });
+    return;
+  } catch (e) {
+    console.error("Erros:", e);
+    res.status(400).json({
+      message: "Internal server error",
+      error: e,
+    });
+    return;
+  }
+});
+
 customerRouter.get("/booking/all",middleware, async (req, res) => {
   try {
       const bookings = await client.booking.findMany({
@@ -582,6 +858,7 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
           endTime: booking.endTime,
           status: booking.status,
           price: booking.totalEarnings,
+          type: booking.type,
         };
       });
       res.json({
@@ -682,7 +959,8 @@ customerRouter.get('/favorite-cars',middleware, async (req, res)=>{
             car: {
               include: {
                 photos: true
-              }
+              },
+              
             },
           },
         },
@@ -693,7 +971,9 @@ customerRouter.get('/favorite-cars',middleware, async (req, res)=>{
       return;
     }
     
-    const favoriteCars = user.favoriteCars.map((car) => {
+    const favoriteCars = user.favoriteCars
+    .filter(car => car.car.status !== "pause") 
+    .map((car) => {
       return {
         id: car.car.id,
         favorite:true,
@@ -756,6 +1036,7 @@ customerRouter.put('/me',middleware, async (req, res) => {
       id: customer.id,
       name: customer.name,
       contact: customer.contact,
+      customer: customer.imageUrl
     });
     return;
 
@@ -910,6 +1191,49 @@ customerRouter.put('/booking-cancel/:id',middleware, async (req,res) => {
       message: "Booking cancelled successfully",
       BookingId: req.params.id,
     });
+    return;
+  }catch(err){
+    console.error(err);
+    res.json({message:"Internal server error",
+      error:err
+    })
+    return;
+  }
+})
+
+customerRouter.put('/me/update-password',middleware, async (req,res) => {
+  const parsedData = CustomerUpdatePasswordSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res
+      .status(400)
+      .json({ message: "Wrong Input type", error: parsedData.error });
+    return;
+  }
+  try{
+    const customer = await client.customer.findFirst({
+      where: {
+        id: req.userId,
+      }
+    })
+    if(!customer) {
+      res.status(401).json({message: "Unauthorized"})
+      return;
+    }
+    if(customer.password  && (!parsedData.data.currPassword || customer.password !== parsedData.data.currPassword)) {
+      res.status(403).json({message: "Invalid current password"})
+      return;
+    }
+    await client.customer.update({
+      where: {
+        id: customer.id
+      },
+      data:{
+        password: parsedData.data.newPassword
+      }
+    })
+    res.json({
+      message: "Password updated successfully"
+    })
     return;
   }catch(err){
     console.error(err);
