@@ -841,7 +841,11 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
             customerId: req.userId,
         },
         include: {
-          car: true,
+          car: {
+            include:{
+              photos:true
+            }
+          },
         },
         orderBy: [{ id: "asc" }],
       });
@@ -849,7 +853,7 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
         return {
           id: booking.id,
           carId: booking.car.id,
-          carImageUrl: booking.car.imageUrl,
+          carImageUrl: booking.car.photos[0],
           carName: booking.car.brand + " " + booking.car.model,
           carPlateNumber: booking.car.plateNumber,
           start: booking.startDate,
