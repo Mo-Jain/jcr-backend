@@ -853,7 +853,7 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
         return {
           id: booking.id,
           carId: booking.car.id,
-          carImageUrl: booking.car.photos[0],
+          carImageUrl: booking.car.photos[0].url,
           carName: booking.car.brand + " " + booking.car.model,
           carPlateNumber: booking.car.plateNumber,
           start: booking.startDate,
