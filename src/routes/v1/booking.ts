@@ -961,6 +961,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         paymentMethod: parsedData.data.paymentMethod,
         notes: parsedData.data.notes,
         dailyRentalPrice: parsedData.data.dailyRentalPrice,
+        status:"Ongoing"
       },
       where: {
         id: req.params.id,

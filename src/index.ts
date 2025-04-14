@@ -3,7 +3,7 @@ import { router } from "./routes/v1";
 import cors from "cors";
 const app = express();
 import dotenv from "dotenv";
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 8080;
 
 // Load environment variables
 dotenv.config();
