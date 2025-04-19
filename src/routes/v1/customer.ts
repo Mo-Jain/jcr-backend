@@ -726,17 +726,8 @@ customerRouter.get("/check-otp/:id", middleware, async (req, res) => {
   }
 });
 
-customerRouter.get("/car/all", middleware, async (req, res) => {
+customerRouter.get("/car/all",  async (req, res) => {
   try {
-    const user = await client.customer.findFirst({
-      where: {
-        id: req.userId,
-      }
-    });
-    if(!user) {
-      res.status(401).json({message: "Unauthorized"})
-      return;
-    }
 
     const cars = await client.car.findMany({
       include: {
@@ -760,7 +751,7 @@ customerRouter.get("/car/all", middleware, async (req, res) => {
         seats: car.seats,
         fuel: car.fuel,
         gear: car.gear,
-        favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
+        favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
         photos: car.photos.map(photo => photo.url)
       };
     });
@@ -779,20 +770,8 @@ customerRouter.get("/car/all", middleware, async (req, res) => {
   }
 });
 
-customerRouter.get("/car/:id", middleware, async (req, res) => {
+customerRouter.get("/car/:id", async (req, res) => {
   try {
-
-    const customer = await client.customer.findFirst({
-      where: {
-        id: req.userId,
-      }
-    });
-
-    if (!customer) {
-      res.status(404).json({ message: "unauthorized" });
-      return;
-    }
-
     const car = await client.car.findFirst({
       where: {
         id: parseInt(req.params.id),
@@ -880,34 +859,13 @@ customerRouter.get("/booking/all",middleware, async (req, res) => {
     }
 });
 
-customerRouter.get("/filtered-cars",middleware,async (req,res) => {
+customerRouter.get("/filtered-cars",async (req,res) => {
   const parsedData = FilterCarsSchema.safeParse(req.query);
   if(!parsedData.success) {
     res.status(400).json({message: "Wrong Input type"})
     return;
   }
   try{
-    if(parsedData.data.user==="customer") {
-      const user = await client.customer.findFirst({
-        where: {
-          id: req.userId,
-        }
-      })
-      if(!user) {
-        res.status(401).json({message: "Unauthorized"})
-        return;
-      }
-    }else {
-      const user = await client.user.findFirst({
-        where: {
-          id: req.userId,
-        }
-      })
-      if(!user) {
-        res.status(401).json({message: "Unauthorized"})
-        return;
-      }
-    }
     
     const cars = await client.car.findMany({
       include: {

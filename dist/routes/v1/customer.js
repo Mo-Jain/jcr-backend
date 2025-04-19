@@ -667,17 +667,8 @@ exports.customerRouter.get("/check-otp/:id", middleware_1.middleware, (req, res)
         return;
     }
 }));
-exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.customerRouter.get("/car/all", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const user = yield src_1.default.customer.findFirst({
-            where: {
-                id: req.userId,
-            }
-        });
-        if (!user) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
         const cars = yield src_1.default.car.findMany({
             include: {
                 bookings: true,
@@ -698,7 +689,7 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
                 seats: car.seats,
                 fuel: car.fuel,
                 gear: car.gear,
-                favorite: car.favoriteCars.filter(favorite => favorite.userId === user.id).length > 0,
+                favorite: car.favoriteCars.filter(favorite => favorite.userId === req.userId).length > 0,
                 photos: car.photos.map(photo => photo.url)
             };
         });
@@ -716,17 +707,8 @@ exports.customerRouter.get("/car/all", middleware_1.middleware, (req, res) => __
         return;
     }
 }));
-exports.customerRouter.get("/car/:id", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.customerRouter.get("/car/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const customer = yield src_1.default.customer.findFirst({
-            where: {
-                id: req.userId,
-            }
-        });
-        if (!customer) {
-            res.status(404).json({ message: "unauthorized" });
-            return;
-        }
         const car = yield src_1.default.car.findFirst({
             where: {
                 id: parseInt(req.params.id),
@@ -774,7 +756,11 @@ exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) =
                 customerId: req.userId,
             },
             include: {
-                car: true,
+                car: {
+                    include: {
+                        photos: true
+                    }
+                },
             },
             orderBy: [{ id: "asc" }],
         });
@@ -782,7 +768,7 @@ exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) =
             return {
                 id: booking.id,
                 carId: booking.car.id,
-                carImageUrl: booking.car.imageUrl,
+                carImageUrl: booking.car.photos[0].url,
                 carName: booking.car.brand + " " + booking.car.model,
                 carPlateNumber: booking.car.plateNumber,
                 start: booking.startDate,
@@ -809,35 +795,13 @@ exports.customerRouter.get("/booking/all", middleware_1.middleware, (req, res) =
         return;
     }
 }));
-exports.customerRouter.get("/filtered-cars", middleware_1.middleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.customerRouter.get("/filtered-cars", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const parsedData = types_1.FilterCarsSchema.safeParse(req.query);
     if (!parsedData.success) {
         res.status(400).json({ message: "Wrong Input type" });
         return;
     }
     try {
-        if (parsedData.data.user === "customer") {
-            const user = yield src_1.default.customer.findFirst({
-                where: {
-                    id: req.userId,
-                }
-            });
-            if (!user) {
-                res.status(401).json({ message: "Unauthorized" });
-                return;
-            }
-        }
-        else {
-            const user = yield src_1.default.user.findFirst({
-                where: {
-                    id: req.userId,
-                }
-            });
-            if (!user) {
-                res.status(401).json({ message: "Unauthorized" });
-                return;
-            }
-        }
         const cars = yield src_1.default.car.findMany({
             include: {
                 bookings: true,
