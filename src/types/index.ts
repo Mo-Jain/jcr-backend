@@ -159,7 +159,7 @@ export const BookingStartSchema = z.object({
   customerAddress: z.string(),
   customerName: z.string(),
   customerContact: z.string(),
-  customerMail: z.string().email(),
+  customerMail: z.string(),
 });
 
 export const BookingStartDocumentSchema = z.object({
