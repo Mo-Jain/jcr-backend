@@ -218,11 +218,12 @@ bookingRouter.get("/all", middleware, async (req, res) => {
         carId: booking.car.id,
         carName: booking.car.brand + " " + booking.car.model,
         carPlateNumber: booking.car.plateNumber,
-        carImageUrl: booking.car.photos[0].url,
+        carImageUrl: booking.car.photos[0]?.url || '',
         customerName: booking.customer.name,
         customerContact: booking.customer.contact,
         carColor: booking.car.colorOfBooking,
         odometerReading: booking.car.odometerReading,
+        fastrack: booking.fastrack,
         cancelledBy: booking.cancelledBy,
         otp: booking.otp,
         type: booking.type,
@@ -358,6 +359,8 @@ bookingRouter.get("/:id", middleware, async (req, res) => {
       paymentMethod: booking.paymentMethod,
       odometerReading: booking.odometerReading,
       endodometerReading: booking.endodometerReading,
+      fastrack: booking.fastrack,
+      endfastrack: booking.endfastrack,
       notes: booking.notes,
       selfieUrl: booking.selfieUrl,
       documents: booking.customer.documents,
@@ -934,6 +937,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
       where: { id: booking.carId },
       data: {
         odometerReading: parsedData.data.odometerReading,
+        fastrack: parsedData.data.fastrack,
       },
     });
 
@@ -956,6 +960,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
         endTime: parsedData.data.returnTime,
         securityDeposit: parsedData.data.securityDeposit,
         odometerReading: parsedData.data.odometerReading,
+        fastrack: parsedData.data.fastrack,
         advancePayment: parsedData.data.bookingAmountReceived,
         totalEarnings: parsedData.data.totalAmount,
         paymentMethod: parsedData.data.paymentMethod,
@@ -971,6 +976,7 @@ bookingRouter.put("/:id/start", middleware, async (req, res) => {
     res.json({
       message: "Booking started successfully",
       updatedStatus: updatedBooking.status,
+      updatedFastrack: updatedBooking.fastrack,
     });
     return;
   } catch (e) {
@@ -1018,6 +1024,7 @@ bookingRouter.put("/:id/end", middleware, async (req, res) => {
         endTime: parsedData.data.endTime,
         status: "Completed",
         endodometerReading: parsedData.data.odometerReading,
+        endfastrack: parsedData.data.fastrack,
         otp: ''
       },
       where: {
@@ -1042,6 +1049,7 @@ bookingRouter.put("/:id/end", middleware, async (req, res) => {
           increment,
         },
         odometerReading: parsedData.data.odometerReading,
+        fastrack: parsedData.data.fastrack,
       },
     });
 

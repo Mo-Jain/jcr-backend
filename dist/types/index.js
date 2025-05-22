@@ -136,6 +136,7 @@ exports.BookingStartSchema = zod_1.default.object({
     dailyRentalPrice: zod_1.default.number(),
     notes: zod_1.default.string().optional(),
     odometerReading: zod_1.default.string(),
+    fastrack: zod_1.default.number(),
     paymentMethod: zod_1.default.string().optional(),
     returnDate: zod_1.default.string(),
     returnTime: zod_1.default.string(),
@@ -147,7 +148,7 @@ exports.BookingStartSchema = zod_1.default.object({
     customerAddress: zod_1.default.string(),
     customerName: zod_1.default.string(),
     customerContact: zod_1.default.string(),
-    customerMail: zod_1.default.string().email(),
+    customerMail: zod_1.default.string(),
 });
 exports.BookingStartDocumentSchema = zod_1.default.object({
     documents: zod_1.default.array(DocumentSchema).optional(),
@@ -158,6 +159,7 @@ exports.BookingEndSchema = zod_1.default.object({
     endDate: zod_1.default.string(),
     endTime: zod_1.default.string(),
     odometerReading: zod_1.default.string(),
+    fastrack: zod_1.default.number(),
 });
 exports.MultipleBookingDeleteSchema = zod_1.default.object({
     bookingIds: zod_1.default.array(zod_1.default.string()),

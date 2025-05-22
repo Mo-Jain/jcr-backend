@@ -39,6 +39,7 @@ model Car {
   totalEarnings           Int?
   carFolderId             String
   odometerReading         String?
+  fastrack                Int?
   seats                   Int      @default(4) 
   fuel                    String   @default("petrol")
   gear                    String   @default("manual")
@@ -74,6 +75,8 @@ model Booking {
   endodometerReading      String?
   notes                   String?
   selfieUrl               String?
+  fastrack                Int?
+  endfastrack             Int?
   bookingFolderId         String
   carImages               CarImages[]
   payments                Payment[]

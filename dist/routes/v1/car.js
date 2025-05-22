@@ -80,6 +80,12 @@ exports.carRouter.post("/", middleware_1.middleware, (req, res) => __awaiter(voi
                 fuel: parsedData.data.fuel
             },
         });
+        yield src_1.default.photos.create({
+            data: {
+                url: parsedData.data.imageUrl,
+                carId: car.id
+            }
+        });
         res.json({
             message: "Car created successfully",
             carId: car.id,

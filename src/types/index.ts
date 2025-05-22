@@ -148,6 +148,7 @@ export const BookingStartSchema = z.object({
   dailyRentalPrice: z.number(),
   notes: z.string().optional(),
   odometerReading: z.string(),
+  fastrack: z.number(),
   paymentMethod: z.string().optional(),  
   returnDate: z.string(),
   returnTime: z.string(),
@@ -172,6 +173,7 @@ export const BookingEndSchema = z.object({
   endDate: z.string(),
   endTime: z.string(),
   odometerReading: z.string(),
+  fastrack: z.number(),
 });
 
 export const MultipleBookingDeleteSchema = z.object({

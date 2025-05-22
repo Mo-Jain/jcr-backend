@@ -187,6 +187,7 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
             orderBy: [{ id: "desc" }],
         });
         const formatedBookings = bookings.map((booking) => {
+            var _a;
             return {
                 id: booking.id,
                 start: booking.startDate,
@@ -197,11 +198,12 @@ exports.bookingRouter.get("/all", middleware_1.middleware, (req, res) => __await
                 carId: booking.car.id,
                 carName: booking.car.brand + " " + booking.car.model,
                 carPlateNumber: booking.car.plateNumber,
-                carImageUrl: booking.car.photos[0].url,
+                carImageUrl: ((_a = booking.car.photos[0]) === null || _a === void 0 ? void 0 : _a.url) || '',
                 customerName: booking.customer.name,
                 customerContact: booking.customer.contact,
                 carColor: booking.car.colorOfBooking,
                 odometerReading: booking.car.odometerReading,
+                fastrack: booking.fastrack,
                 cancelledBy: booking.cancelledBy,
                 otp: booking.otp,
                 type: booking.type,
@@ -334,6 +336,8 @@ exports.bookingRouter.get("/:id", middleware_1.middleware, (req, res) => __await
             paymentMethod: booking.paymentMethod,
             odometerReading: booking.odometerReading,
             endodometerReading: booking.endodometerReading,
+            fastrack: booking.fastrack,
+            endfastrack: booking.endfastrack,
             notes: booking.notes,
             selfieUrl: booking.selfieUrl,
             documents: booking.customer.documents,
@@ -879,6 +883,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
             where: { id: booking.carId },
             data: {
                 odometerReading: parsedData.data.odometerReading,
+                fastrack: parsedData.data.fastrack,
             },
         });
         yield src_1.default.customer.update({
@@ -899,6 +904,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
                 endTime: parsedData.data.returnTime,
                 securityDeposit: parsedData.data.securityDeposit,
                 odometerReading: parsedData.data.odometerReading,
+                fastrack: parsedData.data.fastrack,
                 advancePayment: parsedData.data.bookingAmountReceived,
                 totalEarnings: parsedData.data.totalAmount,
                 paymentMethod: parsedData.data.paymentMethod,
@@ -913,6 +919,7 @@ exports.bookingRouter.put("/:id/start", middleware_1.middleware, (req, res) => _
         res.json({
             message: "Booking started successfully",
             updatedStatus: updatedBooking.status,
+            updatedFastrack: updatedBooking.fastrack,
         });
         return;
     }
@@ -951,6 +958,7 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
                 endTime: parsedData.data.endTime,
                 status: "Completed",
                 endodometerReading: parsedData.data.odometerReading,
+                endfastrack: parsedData.data.fastrack,
                 otp: ''
             },
             where: {
@@ -972,6 +980,7 @@ exports.bookingRouter.put("/:id/end", middleware_1.middleware, (req, res) => __a
                     increment,
                 },
                 odometerReading: parsedData.data.odometerReading,
+                fastrack: parsedData.data.fastrack,
             },
         });
         res.json({
