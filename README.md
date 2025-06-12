@@ -43,14 +43,3 @@ All routes under `/admin` are protected using JWT. Admins must log in with valid
 
 ---
 
-## 📂 Folder Structure
-
-```bash
-src/
-├── controllers/       # Business logic and route handlers
-├── routes/            # Express route definitions
-├── middleware/        # Auth, error handling, etc.
-├── prisma/            # Prisma schema and DB client
-├── utils/             # Helper functions
-├── services/          # Payment and mail integrations
-├── index.ts           # Entry point
